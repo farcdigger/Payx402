@@ -1021,35 +1021,79 @@ app.get("/", (c) => {
           let checkInterval;
           let walletAddress = null;
           let monitoringAttempts = 0;
-          const maxAttempts = 30; // Monitor for 60 seconds
+          const maxAttempts = 60; // Monitor for 2 minutes
           
-          console.log('Starting payment monitoring...');
+          console.log('🔍 Starting payment monitoring...');
           
           checkInterval = setInterval(() => {
             monitoringAttempts++;
-            console.log('Monitoring attempt:', monitoringAttempts);
+            console.log('📊 Monitoring attempt:', monitoringAttempts);
+            
+            // Try enhanced monitoring first
+            if (!walletAddress) {
+              const enhancedResult = enhancedIframeMonitoring();
+              if (enhancedResult) {
+                walletAddress = enhancedResult;
+              }
+            }
             
             try {
               // Try to access iframe content
               const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
               if (iframeDoc && iframeDoc.body) {
                 const bodyText = iframeDoc.body.textContent || iframeDoc.body.innerText;
-                console.log('Iframe content detected:', bodyText.substring(0, 200));
+                const htmlContent = iframeDoc.body.innerHTML;
                 
-                // Try to extract wallet address from x402 payment interface
+                console.log('📄 Iframe content detected:', bodyText.substring(0, 300));
+                console.log('🏷️ HTML content:', htmlContent.substring(0, 500));
+                
+                // Try multiple methods to extract wallet address
+                
+                // Method 1: Look for wallet address in text content
                 if (bodyText.includes('0x') && bodyText.length > 40) {
-                  const addressMatch = bodyText.match(/0x[a-fA-F0-9]{40}/);
-                  if (addressMatch && !walletAddress) {
-                    walletAddress = addressMatch[0];
-                    console.log('✅ Wallet address detected:', walletAddress);
-                    
-                    // Send wallet address to backend for tracking
-                    sendWalletToBackend(walletAddress);
+                  const addressMatches = bodyText.match(/0x[a-fA-F0-9]{40}/g);
+                  if (addressMatches && addressMatches.length > 0) {
+                    // Take the first valid address
+                    const foundAddress = addressMatches[0];
+                    if (!walletAddress || walletAddress !== foundAddress) {
+                      walletAddress = foundAddress;
+                      console.log('✅ Wallet address detected from text:', walletAddress);
+                      sendWalletToBackend(walletAddress);
+                    }
                   }
                 }
                 
+                // Method 2: Look for wallet address in HTML content
+                if (htmlContent.includes('0x') && htmlContent.length > 40) {
+                  const addressMatches = htmlContent.match(/0x[a-fA-F0-9]{40}/g);
+                  if (addressMatches && addressMatches.length > 0) {
+                    const foundAddress = addressMatches[0];
+                    if (!walletAddress || walletAddress !== foundAddress) {
+                      walletAddress = foundAddress;
+                      console.log('✅ Wallet address detected from HTML:', walletAddress);
+                      sendWalletToBackend(walletAddress);
+                    }
+                  }
+                }
+                
+                // Method 3: Look for specific x402 payment elements
+                const walletElements = iframeDoc.querySelectorAll('[data-wallet], .wallet-address, [class*="wallet"], [id*="wallet"]');
+                walletElements.forEach(element => {
+                  const elementText = element.textContent || element.innerText;
+                  if (elementText && elementText.includes('0x') && elementText.length > 40) {
+                    const addressMatch = elementText.match(/0x[a-fA-F0-9]{40}/);
+                    if (addressMatch && (!walletAddress || walletAddress !== addressMatch[0])) {
+                      walletAddress = addressMatch[0];
+                      console.log('✅ Wallet address detected from element:', walletAddress);
+                      sendWalletToBackend(walletAddress);
+                    }
+                  }
+                });
+                
                 // Check for payment success
-                if (bodyText.includes('success') || bodyText.includes('confirmed') || bodyText.includes('complete') || bodyText.includes('Payment successful') || bodyText.includes('Transaction successful')) {
+                if (bodyText.includes('success') || bodyText.includes('confirmed') || bodyText.includes('complete') || 
+                    bodyText.includes('Payment successful') || bodyText.includes('Transaction successful') ||
+                    bodyText.includes('paid') || bodyText.includes('completed')) {
                   console.log('✅ Payment success detected!');
                   clearInterval(checkInterval);
                   
@@ -1057,10 +1101,10 @@ app.get("/", (c) => {
                   if (walletAddress) {
                     sendPaymentConfirmation(walletAddress);
                   } else {
-                    // If no wallet detected, try to extract it now
-                    const addressMatch = bodyText.match(/0x[a-fA-F0-9]{40}/);
-                    if (addressMatch) {
-                      walletAddress = addressMatch[0];
+                    // Last attempt to find wallet address
+                    const addressMatches = bodyText.match(/0x[a-fA-F0-9]{40}/g);
+                    if (addressMatches && addressMatches.length > 0) {
+                      walletAddress = addressMatches[0];
                       console.log('✅ Wallet address detected on success:', walletAddress);
                       sendPaymentConfirmation(walletAddress);
                     }
@@ -1069,16 +1113,16 @@ app.get("/", (c) => {
                   showSuccessOverlay();
                 }
               } else {
-                console.log('Iframe not ready yet...');
+                console.log('⏳ Iframe not ready yet...');
               }
             } catch (e) {
               // Cross-origin error, continue monitoring
-              console.log('Cross-origin error, continuing monitoring...');
+              console.log('🔒 Cross-origin error, continuing monitoring...');
             }
             
             // Stop monitoring after max attempts
             if (monitoringAttempts >= maxAttempts) {
-              console.log('Monitoring timeout reached');
+              console.log('⏰ Monitoring timeout reached');
               clearInterval(checkInterval);
               
               // Try to get wallet address from URL parameters as fallback
@@ -1259,7 +1303,7 @@ app.get("/", (c) => {
         
         // Listen for messages from iframe (x402 payment)
         window.addEventListener('message', function(event) {
-          console.log('Message received from iframe:', event.data);
+          console.log('📨 Message received from iframe:', event.data);
           
           // Check if message contains wallet address
           if (event.data && event.data.wallet) {
@@ -1276,6 +1320,74 @@ app.get("/", (c) => {
             showSuccessOverlay();
           }
         });
+        
+        // Enhanced iframe monitoring with better detection
+        function enhancedIframeMonitoring() {
+          const iframe = document.getElementById('paymentIframe');
+          if (!iframe) return;
+          
+          // Try to access iframe content more aggressively
+          try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (iframeDoc && iframeDoc.body) {
+              console.log('🔍 Enhanced monitoring: iframe accessible');
+              
+              // Look for wallet address in all possible places
+              const allText = iframeDoc.body.textContent || iframeDoc.body.innerText;
+              const allHTML = iframeDoc.body.innerHTML;
+              
+              // Method 1: Direct text search
+              const walletRegex = /0x[a-fA-F0-9]{40}/g;
+              const textMatches = allText.match(walletRegex);
+              const htmlMatches = allHTML.match(walletRegex);
+              
+              if (textMatches && textMatches.length > 0) {
+                const walletAddress = textMatches[0];
+                console.log('✅ Enhanced detection: Wallet found in text:', walletAddress);
+                sendWalletToBackend(walletAddress);
+                return walletAddress;
+              }
+              
+              if (htmlMatches && htmlMatches.length > 0) {
+                const walletAddress = htmlMatches[0];
+                console.log('✅ Enhanced detection: Wallet found in HTML:', walletAddress);
+                sendWalletToBackend(walletAddress);
+                return walletAddress;
+              }
+              
+              // Method 2: Look for specific x402 elements
+              const possibleSelectors = [
+                '[data-wallet]',
+                '.wallet-address',
+                '[class*="wallet"]',
+                '[id*="wallet"]',
+                '[class*="address"]',
+                '[id*="address"]',
+                'span', 'div', 'p', 'strong', 'b'
+              ];
+              
+              for (const selector of possibleSelectors) {
+                const elements = iframeDoc.querySelectorAll(selector);
+                elements.forEach(element => {
+                  const text = element.textContent || element.innerText;
+                  if (text && text.includes('0x') && text.length > 40) {
+                    const match = text.match(/0x[a-fA-F0-9]{40}/);
+                    if (match) {
+                      const walletAddress = match[0];
+                      console.log('✅ Enhanced detection: Wallet found in element:', walletAddress);
+                      sendWalletToBackend(walletAddress);
+                      return walletAddress;
+                    }
+                  }
+                });
+              }
+            }
+          } catch (e) {
+            console.log('🔒 Enhanced monitoring: Cross-origin error');
+          }
+          
+          return null;
+        }
         
         // Initial check for wallet in URL (if user navigates directly)
         document.addEventListener('DOMContentLoaded', () => {
