@@ -383,11 +383,15 @@ app.get("/blockchain-transactions", async (c) => {
     
     console.log('🔍 Fetching transactions from BaseScan for wallet:', walletAddress);
     
-    // BaseScan API endpoint for token transactions
-    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=YourApiKeyToken`;
+    // BaseScan API endpoint for token transactions (no API key needed for basic requests)
+    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc`;
+    
+    console.log('📡 BaseScan URL:', baseScanUrl);
     
     const response = await fetch(baseScanUrl);
     const data = await response.json();
+    
+    console.log('📊 BaseScan response:', JSON.stringify(data, null, 2));
     
     if (data.status === '1' && data.result) {
       // Filter for USDC transactions (USDC contract: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
@@ -402,16 +406,20 @@ app.get("/blockchain-transactions", async (c) => {
         wallet: walletAddress,
         totalTransactions: usdcTransactions.length,
         transactions: usdcTransactions.slice(0, 10), // Last 10 transactions
-        message: "Blockchain transactions fetched successfully"
+        message: "Blockchain transactions fetched successfully",
+        rawData: data
       });
     } else {
       return c.json({
         success: false,
         error: "Failed to fetch transactions from BaseScan",
-        data: data
+        data: data,
+        status: data.status,
+        message: data.message
       });
     }
   } catch (error) {
+    console.log('❌ BaseScan fetch error:', error);
     return c.json({
       success: false,
       error: `Blockchain fetch error: ${error.message}`
@@ -426,8 +434,8 @@ app.post("/sync-blockchain", async (c) => {
     
     console.log('🔄 Syncing blockchain transactions to Supabase...');
     
-    // Get transactions from BaseScan
-    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=YourApiKeyToken`;
+    // Get transactions from BaseScan (no API key needed for basic requests)
+    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc`;
     
     const response = await fetch(baseScanUrl);
     const data = await response.json();
@@ -899,22 +907,6 @@ app.get("/", (c) => {
             <button class="modal-close" onclick="closePaymentModal()">✕ CLOSE</button>
           </div>
           <div class="modal-body">
-                   <!-- Payment Info -->
-                   <div style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
-                     <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 PAYMENT SYSTEM</h4>
-                     <p style="font-size: 10px; color: #4d94ff; margin-bottom: 15px; text-align: center; background: #001d3d; padding: 10px; border: 2px solid #4d94ff;">
-                       <strong>🔗 BLOCKCHAIN TRACKING:</strong> Your payments are automatically tracked from blockchain. No manual input required!
-                     </p>
-                     
-                     <div style="background: #001d3d; padding: 15px; border: 2px solid #2ecc71; margin-bottom: 15px;">
-                       <p style="color: #2ecc71; font-size: 11px; margin: 0; text-align: center;">
-                         ✅ Automatic blockchain monitoring<br>
-                         ✅ Real-time transaction detection<br>
-                         ✅ Secure payment verification<br>
-                         ✅ No manual wallet input needed
-                       </p>
-                     </div>
-                   </div>
             <iframe id="paymentIframe" class="modal-iframe" src="about:blank" style="display: none;"></iframe>
           </div>
         </div>
