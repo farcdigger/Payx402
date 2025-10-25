@@ -757,6 +757,39 @@ app.get("/", (c) => {
           // Start monitoring for payment success
           setTimeout(() => startPaymentMonitoring(), 1000);
         }
+        
+        // Payment monitoring function
+        function startPaymentMonitoring() {
+          const iframe = document.getElementById('paymentIframe');
+          let checkInterval;
+          
+          checkInterval = setInterval(() => {
+            try {
+              const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+              if (iframeDoc && iframeDoc.body) {
+                const bodyText = iframeDoc.body.textContent || iframeDoc.body.innerText;
+                if (bodyText.includes('success') || bodyText.includes('confirmed') || bodyText.includes('complete')) {
+                  clearInterval(checkInterval);
+                  showSuccessOverlay();
+                }
+              }
+            } catch (e) {
+              // Cross-origin error, continue monitoring
+            }
+          }, 2000);
+        }
+        
+        // Success overlay function
+        function showSuccessOverlay() {
+          const overlay = document.getElementById('successOverlay');
+          overlay.style.display = 'flex';
+          createCoinRain();
+        }
+        
+        function closeSuccessOverlay() {
+          const overlay = document.getElementById('successOverlay');
+          overlay.style.display = 'none';
+        }
           
           // Start monitoring for payment success
           setTimeout(() => startPaymentMonitoring(), 1000);
