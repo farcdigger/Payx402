@@ -390,7 +390,8 @@ app.get("/blockchain-transactions", async (c) => {
     console.log('🔍 Fetching transactions from BaseScan for wallet:', walletAddress);
     
     // BaseScan API endpoint for token transactions with API key
-    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    // Using Etherscan API with Base chain ID (8453)
+    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     console.log('📡 BaseScan URL:', baseScanUrl);
     
@@ -441,10 +442,14 @@ app.post("/sync-blockchain", async (c) => {
     console.log('🔄 Syncing blockchain transactions to Supabase...');
     
     // Get transactions from BaseScan with API key
-    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    // Using Etherscan API with Base chain ID (8453)
+    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     const response = await fetch(baseScanUrl);
     const data = await response.json();
+    
+    console.log('📊 API Response Status:', response.status);
+    console.log('📊 API Response Data:', JSON.stringify(data, null, 2));
     
     if (data.status === '1' && data.result) {
       // Filter for USDC transactions TO our wallet (incoming payments)
@@ -514,7 +519,10 @@ app.post("/sync-blockchain", async (c) => {
     
     return c.json({
       success: false,
-      error: "Failed to fetch or sync transactions"
+      error: "Failed to fetch or sync transactions",
+      apiResponse: data,
+      status: data.status,
+      message: data.message
     });
   } catch (error) {
     return c.json({
@@ -532,8 +540,8 @@ app.get("/test-blockchain", async (c) => {
     
     console.log('🧪 Testing blockchain connection with API key...');
     
-    // Test with API key
-    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`;
+    // Test with API key using Etherscan API with Base chain ID (8453)
+    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=${apiKey}`;
     
     console.log('📡 Testing URL:', baseScanUrl);
     
