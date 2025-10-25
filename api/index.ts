@@ -657,7 +657,14 @@ app.get("/", (c) => {
             <button class="modal-close" onclick="closePaymentModal()">✕ CLOSE</button>
           </div>
           <div class="modal-body">
-            <iframe id="paymentIframe" class="modal-iframe" src="about:blank"></iframe>
+            <!-- Wallet Address Input -->
+            <div id="walletInputSection" style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
+              <h4 style="color: #2ecc71; margin-bottom: 10px; font-size: 12px;">💰 Enter Your Wallet Address</h4>
+              <input type="text" id="paymentWalletInput" placeholder="0x1234567890abcdef..." style="width: 100%; padding: 10px; margin-bottom: 10px; font-family: 'Press Start 2P', monospace; font-size: 10px; background: #001d3d; color: #0052FF; border: 2px solid #0052FF;">
+              <p style="font-size: 8px; color: #4d94ff; margin-bottom: 10px;">This will be used to track your PAYX tokens</p>
+              <button onclick="startPayment()" style="background: #2ecc71; border: 3px solid #000; color: #000; padding: 10px 20px; font-size: 10px; cursor: pointer; box-shadow: 3px 3px 0px #000;">Start Payment</button>
+            </div>
+            <iframe id="paymentIframe" class="modal-iframe" src="about:blank" style="display: none;"></iframe>
           </div>
         </div>
       </div>
@@ -680,11 +687,21 @@ app.get("/", (c) => {
       <div id="coinRain" class="coin-rain"></div>
       
       <script>
+        let currentPaymentUrl = '';
+        let currentPaymentTitle = '';
+        let currentPaymentType = '';
+        
         function openPaymentModal(url, title, type) {
           const modal = document.getElementById('paymentModal');
           const modalContent = document.getElementById('modalContent');
           const modalTitle = document.getElementById('modalTitle');
           const iframe = document.getElementById('paymentIframe');
+          const walletInputSection = document.getElementById('walletInputSection');
+          
+          // Store payment info
+          currentPaymentUrl = url;
+          currentPaymentTitle = title;
+          currentPaymentType = type;
           
           // Set title
           modalTitle.textContent = title;
@@ -697,6 +714,10 @@ app.get("/", (c) => {
             modalContent.classList.add('premium');
           }
           
+          // Show wallet input, hide iframe
+          walletInputSection.style.display = 'block';
+          iframe.style.display = 'none';
+          
           // Load payment iframe
           iframe.src = url;
           
@@ -705,6 +726,32 @@ app.get("/", (c) => {
           
           // Prevent body scroll
           document.body.style.overflow = 'hidden';
+        }
+        
+        function startPayment() {
+          const walletInput = document.getElementById('paymentWalletInput');
+          const walletAddress = walletInput.value.trim();
+          
+          if (!walletAddress) {
+            alert('Please enter your wallet address');
+            return;
+          }
+          
+          if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+            alert('Please enter a valid wallet address (0x...)');
+            return;
+          }
+          
+          // Hide wallet input, show iframe
+          const walletInputSection = document.getElementById('walletInputSection');
+          const iframe = document.getElementById('paymentIframe');
+          
+          walletInputSection.style.display = 'none';
+          iframe.style.display = 'block';
+          
+          // Load payment with wallet address
+          iframe.src = \`\${currentPaymentUrl}?wallet=\${encodeURIComponent(walletAddress)}\`;
+        }
           
           // Start monitoring for payment success
           setTimeout(() => startPaymentMonitoring(), 1000);
