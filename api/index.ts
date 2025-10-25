@@ -334,6 +334,48 @@ app.get("/test-supabase", async (c) => {
   }
 });
 
+// Test payment recording
+app.post("/test-payment", async (c) => {
+  try {
+    const { wallet, amount } = await c.req.json();
+    
+    console.log('🧪 Test payment received:', { wallet, amount });
+    
+    // Send to Supabase
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    
+    if (supabaseUrl && supabaseKey && wallet) {
+      const response = await fetch(`${supabaseUrl}/rest/v1/payments`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          wallet_address: wallet,
+          amount_usdc: amount || 5,
+          amount_payx: (amount || 5) * 20000
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Test payment recorded in Supabase');
+        return c.json({ success: true, message: "Test payment recorded successfully" });
+      } else {
+        console.log('❌ Failed to record test payment:', response.status);
+        return c.json({ success: false, error: "Failed to record test payment" });
+      }
+    }
+    
+    return c.json({ success: true, message: "Test payment received" });
+  } catch (error) {
+    return c.json({ success: false, error: error.message });
+  }
+});
+
 // Simple info page with links to protected endpoints
 app.get("/", (c) => {
   // Vercel optimization - faster response
@@ -1010,6 +1052,20 @@ app.get("/", (c) => {
             currentPaymentUrl;
           
           iframe.src = paymentUrl;
+          
+          // If no wallet provided, try to get it from URL or generate a session ID
+          if (!walletAddress) {
+            const sessionId = Date.now();
+            console.log('🔑 No wallet provided, using session ID:', sessionId);
+            
+            // Try to get wallet from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const walletParam = urlParams.get('wallet');
+            if (walletParam) {
+              console.log('✅ Wallet found in URL parameters:', walletParam);
+              sendWalletToBackend(walletParam);
+            }
+          }
           
           // Start monitoring for payment success
           setTimeout(() => startPaymentMonitoring(), 1000);
