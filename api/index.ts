@@ -391,6 +391,8 @@ app.get("/blockchain-transactions", async (c) => {
     
     // BaseScan API endpoint for token transactions with API key
     // Using Etherscan API with Base chain ID (8453)
+    // Get last 7 days of transactions
+    const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     console.log('📡 BaseScan URL:', baseScanUrl);
@@ -447,6 +449,8 @@ app.post("/sync-blockchain", async (c) => {
     
     // Get transactions from BaseScan with API key
     // Using Etherscan API with Base chain ID (8453)
+    // Get last 7 days of transactions
+    const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     const response = await fetch(baseScanUrl);
@@ -623,6 +627,121 @@ app.get("/dashboard", async (c) => {
   return c.json({ success: false, error: 'Failed to fetch dashboard data' });
 });
 
+// Auto-sync all historical data
+app.post("/sync-all-historical", async (c) => {
+  try {
+    const walletAddress = "0xda8d766bc482a7953b72283f56c12ce00da6a86a";
+    
+    console.log('🔄 Syncing ALL historical data...');
+    
+    // Get all transactions from the beginning
+    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    
+    const response = await fetch(baseScanUrl);
+    const data = await response.json();
+    
+    console.log('📊 API Response Status:', response.status);
+    console.log('📊 Total transactions found:', data.result ? data.result.length : 0);
+    
+    if (data.status === '1' && data.result) {
+      // Filter for USDC transactions TO our wallet (incoming payments)
+      const usdcTransactions = data.result.filter(tx => {
+        const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
+        const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+        const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
+        
+        return isUsdc && isIncoming && isNotTest;
+      });
+      
+      console.log('✅ Found incoming USDC transactions (>=0.1 USDC):', usdcTransactions.length);
+      
+      // Send to Supabase
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && supabaseKey) {
+        let syncedCount = 0;
+        let skippedCount = 0;
+        
+        for (const tx of usdcTransactions) {
+          try {
+            // Convert from wei to USDC (USDC has 6 decimals)
+            const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+            const amountPayx = amountUsdc * 20000; // 1 USDC = 20,000 PAYX
+            
+            // Check if transaction already exists
+            const checkResponse = await fetch(`${supabaseUrl}/rest/v1/payments?transaction_hash=eq.${tx.hash}&select=id`, {
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`
+              }
+            });
+            
+            if (checkResponse.ok) {
+              const existingTransactions = await checkResponse.json();
+              if (existingTransactions.length > 0) {
+                console.log(`⏭️ Transaction already exists: ${tx.hash}`);
+                skippedCount++;
+                continue; // Skip this transaction
+              }
+            }
+            
+            const supabaseResponse = await fetch(`${supabaseUrl}/rest/v1/payments`, {
+              method: 'POST',
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify({
+                wallet_address: tx.from, // Who sent the payment
+                amount_usdc: amountUsdc,
+                amount_payx: amountPayx,
+                transaction_hash: tx.hash,
+                block_number: tx.blockNumber,
+                created_at: new Date(parseInt(tx.timeStamp) * 1000).toISOString()
+              })
+            });
+            
+            if (supabaseResponse.ok) {
+              syncedCount++;
+              console.log(`✅ Synced transaction: ${tx.hash} from ${tx.from}`);
+            } else {
+              console.log(`❌ Failed to sync transaction: ${tx.hash}`, await supabaseResponse.text());
+            }
+          } catch (error) {
+            console.log(`❌ Failed to sync transaction: ${tx.hash}`, error);
+          }
+        }
+        
+        return c.json({
+          success: true,
+          message: `Synced ${syncedCount} new transactions, skipped ${skippedCount} existing`,
+          totalFound: usdcTransactions.length,
+          synced: syncedCount,
+          skipped: skippedCount,
+          transactions: usdcTransactions.slice(0, 10) // Show first 10 transactions
+        });
+      }
+    }
+    
+    return c.json({
+      success: false,
+      error: "Failed to fetch or sync transactions",
+      apiResponse: data,
+      status: data.status,
+      message: data.message
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: `Sync error: ${error.message}`
+    });
+  }
+});
+
 // Test blockchain connection with API key
 app.get("/test-blockchain", async (c) => {
   try {
@@ -632,6 +751,8 @@ app.get("/test-blockchain", async (c) => {
     console.log('🧪 Testing blockchain connection with API key...');
     
     // Test with API key using Etherscan API with Base chain ID (8453)
+    // Get last 7 days of transactions
+    const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=${apiKey}`;
     
     console.log('📡 Testing URL:', baseScanUrl);
