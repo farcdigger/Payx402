@@ -401,12 +401,16 @@ app.get("/blockchain-transactions", async (c) => {
     console.log('📊 BaseScan response:', JSON.stringify(data, null, 2));
     
     if (data.status === '1' && data.result) {
-      // Filter for USDC transactions (USDC contract: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
-      const usdcTransactions = data.result.filter(tx => 
-        tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
-      );
+      // Filter for USDC transactions (excluding 0.01 USDC test payments)
+      const usdcTransactions = data.result.filter(tx => {
+        const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+        const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
+        
+        return isUsdc && isNotTest;
+      });
       
-      console.log('✅ Found USDC transactions:', usdcTransactions.length);
+      console.log('✅ Found USDC transactions (>=0.1 USDC):', usdcTransactions.length);
       
       return c.json({
         success: true,
@@ -453,12 +457,16 @@ app.post("/sync-blockchain", async (c) => {
     
     if (data.status === '1' && data.result) {
       // Filter for USDC transactions TO our wallet (incoming payments)
-      const usdcTransactions = data.result.filter(tx => 
-        tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' &&
-        tx.to.toLowerCase() === walletAddress.toLowerCase() // Only incoming transactions
-      );
+      const usdcTransactions = data.result.filter(tx => {
+        const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
+        const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+        const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
+        
+        return isUsdc && isIncoming && isNotTest;
+      });
       
-      console.log('✅ Found incoming USDC transactions:', usdcTransactions.length);
+      console.log('✅ Found incoming USDC transactions (>=0.1 USDC):', usdcTransactions.length);
       
       // Send to Supabase
       const supabaseUrl = process.env.SUPABASE_URL;
@@ -551,9 +559,13 @@ app.get("/test-blockchain", async (c) => {
     console.log('📊 API Response:', JSON.stringify(data, null, 2));
     
     if (data.status === '1' && data.result) {
-      const usdcTransactions = data.result.filter(tx => 
-        tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
-      );
+      const usdcTransactions = data.result.filter(tx => {
+        const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+        const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
+        
+        return isUsdc && isNotTest;
+      });
       
       return c.json({
         success: true,
