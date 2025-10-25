@@ -8,7 +8,7 @@ const isVercel = process.env.VERCEL === '1';
 const facilitatorUrl: string = process.env.FACILITATOR_URL || 'https://x402.org/facilitator';
 const payTo = (process.env.ADDRESS || '0xda8d766bc482a7953b72283f56c12ce00da6a86a') as `0x${string}`;
 const network = 'base'; // Always use Base network
-const rpcUrl = process.env.BASE_RPC_URL || 'https://mainnet.base.org'; // Use public Base RPC
+const rpcUrl = process.env.BASE_RPC_URL || 'https://api.developer.coinbase.com/rpc/v1/base/INI3BbjORF6Dibor4YYY21mATAn7BIAo'; // Use Coinbase Base RPC
 
 const app = new Hono();
 
