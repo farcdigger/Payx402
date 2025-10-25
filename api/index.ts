@@ -218,6 +218,47 @@ app.get("/balance/:walletAddress", async (c) => {
   return c.json({ success: false, error: 'Failed to fetch balance' });
 });
 
+// Test Supabase connection
+app.get("/test-supabase", async (c) => {
+  if (!process.env.SUPABASE_URL) {
+    return c.json({ 
+      success: false, 
+      error: 'Supabase not configured',
+      message: 'Add SUPABASE_URL and SUPABASE_ANON_KEY to environment variables'
+    });
+  }
+
+  try {
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments?limit=1`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'apikey': process.env.SUPABASE_ANON_KEY
+      }
+    });
+
+    if (response.ok) {
+      return c.json({
+        success: true,
+        message: 'Supabase connection successful!',
+        supabaseUrl: process.env.SUPABASE_URL,
+        hasKey: !!process.env.SUPABASE_ANON_KEY
+      });
+    } else {
+      return c.json({
+        success: false,
+        error: `Supabase connection failed: ${response.status}`,
+        supabaseUrl: process.env.SUPABASE_URL
+      });
+    }
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: `Supabase connection error: ${error}`,
+      supabaseUrl: process.env.SUPABASE_URL
+    });
+  }
+});
+
 // Simple info page with links to protected endpoints
 app.get("/", (c) => {
   // Vercel optimization - faster response
