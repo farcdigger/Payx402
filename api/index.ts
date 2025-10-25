@@ -204,8 +204,8 @@ app.get("/balance/:walletAddress", async (c) => {
       const payments = await response.json();
       const totalPayx = payments.reduce((sum, p) => sum + p.amount_payx, 0);
       
-      return c.json({
-        success: true,
+  return c.json({
+    success: true,
         walletAddress,
         totalPayx,
         payments
@@ -899,16 +899,21 @@ app.get("/", (c) => {
             <button class="modal-close" onclick="closePaymentModal()">✕ CLOSE</button>
           </div>
           <div class="modal-body">
-                   <!-- Wallet Address Input -->
-                   <div id="walletInputSection" style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
-                     <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 OPTIONAL: Enter Your Wallet Address</h4>
+                   <!-- Payment Info -->
+                   <div id="paymentInfoSection" style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
+                     <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 PAYMENT SYSTEM</h4>
                      <p style="font-size: 10px; color: #4d94ff; margin-bottom: 15px; text-align: center; background: #001d3d; padding: 10px; border: 2px solid #4d94ff;">
-                       <strong>💡 TIP:</strong> Enter your wallet address to receive PAYX tokens. This is optional but recommended for tracking.
+                       <strong>🔗 BLOCKCHAIN TRACKING:</strong> Your payments are automatically tracked from blockchain. No manual input required!
                      </p>
                      
-                     <!-- Manual Input -->
-                     <input type="text" id="paymentWalletInput" placeholder="Enter wallet address (0x...) - Optional but recommended" style="width: 100%; padding: 15px; margin-bottom: 15px; font-family: 'Press Start 2P', monospace; font-size: 12px; background: #001d3d; color: #0052FF; border: 3px solid #4d94ff; text-align: center;">
-                     <p style="font-size: 9px; color: #4d94ff; margin-bottom: 15px; text-align: center;">This address will receive your PAYX tokens after payment</p>
+                     <div style="background: #001d3d; padding: 15px; border: 2px solid #2ecc71; margin-bottom: 15px;">
+                       <p style="color: #2ecc71; font-size: 11px; margin: 0; text-align: center;">
+                         ✅ Automatic blockchain monitoring<br>
+                         ✅ Real-time transaction detection<br>
+                         ✅ Secure payment verification<br>
+                         ✅ No manual wallet input needed
+                       </p>
+          </div>
                      
                      <button onclick="startPayment()" id="startPaymentBtn" style="background: #2ecc71; border: 4px solid #000; color: #000; padding: 15px 30px; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0px #000; width: 100%; font-weight: bold;">🚀 START PAYMENT</button>
                    </div>
@@ -1151,218 +1156,86 @@ app.get("/", (c) => {
         }
         
         function startPayment() {
-          const walletInput = document.getElementById('paymentWalletInput');
-          const walletAddress = walletInput.value.trim();
-          const walletInputSection = document.getElementById('walletInputSection');
+          const paymentInfoSection = document.getElementById('paymentInfoSection');
           const iframe = document.getElementById('paymentIframe');
           
-          // If wallet address provided, validate it
-          if (walletAddress) {
-            if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
-              alert('❌ ERROR: Please enter a valid wallet address (0x... format, 42 characters)');
-              return;
-            }
-            
-            // Send wallet address to backend for tracking
-            sendWalletToBackend(walletAddress);
-          }
-          
-          // Hide wallet input, show iframe
-          walletInputSection.style.display = 'none';
+          // Hide payment info, show iframe
+          paymentInfoSection.style.display = 'none';
           iframe.style.display = 'block';
           
-          // Load payment with wallet address (if provided)
-          const paymentUrl = walletAddress ? 
-            \`\${currentPaymentUrl}?wallet=\${encodeURIComponent(walletAddress)}\` : 
-            currentPaymentUrl;
+          // Load payment directly - blockchain will track automatically
+          iframe.src = currentPaymentUrl;
           
-          iframe.src = paymentUrl;
+          console.log('🚀 Starting payment with blockchain tracking...');
           
-          // If no wallet provided, try to get it from URL or generate a session ID
-          if (!walletAddress) {
-            const sessionId = Date.now();
-            console.log('🔑 No wallet provided, using session ID:', sessionId);
-            
-            // Try to get wallet from URL parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            const walletParam = urlParams.get('wallet');
-            if (walletParam) {
-              console.log('✅ Wallet found in URL parameters:', walletParam);
-              sendWalletToBackend(walletParam);
-            }
-          }
-          
-          // Start monitoring for payment success
-          setTimeout(() => startPaymentMonitoring(), 1000);
+          // Start blockchain monitoring
+          setTimeout(() => startBlockchainMonitoring(), 1000);
         }
         
-        // Payment monitoring function
-        function startPaymentMonitoring() {
-          const iframe = document.getElementById('paymentIframe');
-          let checkInterval;
-          let walletAddress = null;
+        // Blockchain monitoring function
+        function startBlockchainMonitoring() {
+          console.log('🔍 Starting blockchain monitoring...');
+          
+          // Monitor for 5 minutes
           let monitoringAttempts = 0;
-          const maxAttempts = 60; // Monitor for 2 minutes
+          const maxAttempts = 150; // 5 minutes
           
-          console.log('🔍 Starting payment monitoring...');
-          
-          checkInterval = setInterval(() => {
+          const checkInterval = setInterval(() => {
             monitoringAttempts++;
-            console.log('📊 Monitoring attempt:', monitoringAttempts);
+            console.log('📊 Blockchain monitoring attempt:', monitoringAttempts);
             
-            // Try enhanced monitoring first
-            if (!walletAddress) {
-              const enhancedResult = enhancedIframeMonitoring();
-              if (enhancedResult) {
-                walletAddress = enhancedResult;
-              }
-            }
-            
-            try {
-              // Try to access iframe content
-              const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-              if (iframeDoc && iframeDoc.body) {
-                const bodyText = iframeDoc.body.textContent || iframeDoc.body.innerText;
-                const htmlContent = iframeDoc.body.innerHTML;
-                
-                console.log('📄 Iframe content detected:', bodyText.substring(0, 300));
-                console.log('🏷️ HTML content:', htmlContent.substring(0, 500));
-                
-                // Try multiple methods to extract wallet address
-                
-                // Method 1: Look for wallet address in text content
-                if (bodyText.includes('0x') && bodyText.length > 40) {
-                  const addressMatches = bodyText.match(/0x[a-fA-F0-9]{40}/g);
-                  if (addressMatches && addressMatches.length > 0) {
-                    // Take the first valid address
-                    const foundAddress = addressMatches[0];
-                    if (!walletAddress || walletAddress !== foundAddress) {
-                      walletAddress = foundAddress;
-                      console.log('✅ Wallet address detected from text:', walletAddress);
-                      sendWalletToBackend(walletAddress);
-                    }
-                  }
-                }
-                
-                // Method 2: Look for wallet address in HTML content
-                if (htmlContent.includes('0x') && htmlContent.length > 40) {
-                  const addressMatches = htmlContent.match(/0x[a-fA-F0-9]{40}/g);
-                  if (addressMatches && addressMatches.length > 0) {
-                    const foundAddress = addressMatches[0];
-                    if (!walletAddress || walletAddress !== foundAddress) {
-                      walletAddress = foundAddress;
-                      console.log('✅ Wallet address detected from HTML:', walletAddress);
-                      sendWalletToBackend(walletAddress);
-                    }
-                  }
-                }
-                
-                // Method 3: Look for specific x402 payment elements
-                const walletElements = iframeDoc.querySelectorAll('[data-wallet], .wallet-address, [class*="wallet"], [id*="wallet"]');
-                walletElements.forEach(element => {
-                  const elementText = element.textContent || element.innerText;
-                  if (elementText && elementText.includes('0x') && elementText.length > 40) {
-                    const addressMatch = elementText.match(/0x[a-fA-F0-9]{40}/);
-                    if (addressMatch && (!walletAddress || walletAddress !== addressMatch[0])) {
-                      walletAddress = addressMatch[0];
-                      console.log('✅ Wallet address detected from element:', walletAddress);
-                      sendWalletToBackend(walletAddress);
-                    }
-                  }
-                });
-                
-                // Check for payment success
-                if (bodyText.includes('success') || bodyText.includes('confirmed') || bodyText.includes('complete') || 
-                    bodyText.includes('Payment successful') || bodyText.includes('Transaction successful') ||
-                    bodyText.includes('paid') || bodyText.includes('completed')) {
-                  console.log('✅ Payment success detected!');
-                  clearInterval(checkInterval);
-                  
-                  // Send final payment confirmation with wallet address
-                  if (walletAddress) {
-                    sendPaymentConfirmation(walletAddress);
-                  } else {
-                    // Last attempt to find wallet address
-                    const addressMatches = bodyText.match(/0x[a-fA-F0-9]{40}/g);
-                    if (addressMatches && addressMatches.length > 0) {
-                      walletAddress = addressMatches[0];
-                      console.log('✅ Wallet address detected on success:', walletAddress);
-                      sendPaymentConfirmation(walletAddress);
-                    }
-                  }
-                  
-                  showSuccessOverlay();
-                }
-              } else {
-                console.log('⏳ Iframe not ready yet...');
-              }
-            } catch (e) {
-              // Cross-origin error, continue monitoring
-              console.log('🔒 Cross-origin error, continuing monitoring...');
+            // Sync blockchain transactions every 10 seconds
+            if (monitoringAttempts % 5 === 0) {
+              syncBlockchainTransactions();
             }
             
             // Stop monitoring after max attempts
             if (monitoringAttempts >= maxAttempts) {
-              console.log('⏰ Monitoring timeout reached');
+              console.log('⏰ Blockchain monitoring timeout reached');
               clearInterval(checkInterval);
-              
-              // Try to get wallet address from URL parameters as fallback
-              const urlParams = new URLSearchParams(window.location.search);
-              const walletParam = urlParams.get('wallet');
-              if (walletParam && !walletAddress) {
-                walletAddress = walletParam;
-                console.log('✅ Wallet address from URL parameter:', walletAddress);
-                sendWalletToBackend(walletAddress);
-              }
             }
           }, 2000);
         }
         
-        // Send wallet address to backend for tracking
-        async function sendWalletToBackend(walletAddress) {
+        // Sync blockchain transactions
+        async function syncBlockchainTransactions() {
           try {
-            const response = await fetch('/track-wallet', {
+            console.log('🔄 Syncing blockchain transactions...');
+            
+            const response = await fetch('/sync-blockchain', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                wallet: walletAddress,
-                paymentUrl: currentPaymentUrl,
-                paymentType: currentPaymentType
-              })
+              }
             });
             
-            if (response.ok) {
-              console.log('Wallet address sent to backend:', walletAddress);
+            const data = await response.json();
+            
+            if (data.success) {
+              console.log('✅ Blockchain sync successful:', data.message);
+              if (data.synced > 0) {
+                showSuccessOverlay();
+              }
+            } else {
+              console.log('❌ Blockchain sync failed:', data.error);
             }
           } catch (error) {
-            console.log('Failed to send wallet address:', error);
+            console.log('❌ Blockchain sync error:', error);
           }
         }
         
-        // Send payment confirmation to backend
+        // Legacy payment monitoring (kept for compatibility)
+        function startPaymentMonitoring() {
+          console.log('⚠️ Legacy payment monitoring - use blockchain monitoring instead');
+        }
+        
+        // Legacy functions (kept for compatibility)
+        async function sendWalletToBackend(walletAddress) {
+          console.log('⚠️ Legacy wallet tracking - use blockchain monitoring instead');
+        }
+        
         async function sendPaymentConfirmation(walletAddress) {
-          try {
-            const response = await fetch('/payment-confirmation', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                wallet: walletAddress,
-                paymentUrl: currentPaymentUrl,
-                paymentType: currentPaymentType,
-                status: 'completed'
-              })
-            });
-            
-            if (response.ok) {
-              console.log('Payment confirmation sent:', walletAddress);
-            }
-          } catch (error) {
-            console.log('Failed to send payment confirmation:', error);
-          }
+          console.log('⚠️ Legacy payment confirmation - use blockchain monitoring instead');
         }
         
         // Success overlay function
@@ -1502,71 +1375,9 @@ app.get("/", (c) => {
           }
         });
         
-        // Enhanced iframe monitoring with better detection
+        // Legacy enhanced monitoring (kept for compatibility)
         function enhancedIframeMonitoring() {
-          const iframe = document.getElementById('paymentIframe');
-          if (!iframe) return;
-          
-          // Try to access iframe content more aggressively
-          try {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (iframeDoc && iframeDoc.body) {
-              console.log('🔍 Enhanced monitoring: iframe accessible');
-              
-              // Look for wallet address in all possible places
-              const allText = iframeDoc.body.textContent || iframeDoc.body.innerText;
-              const allHTML = iframeDoc.body.innerHTML;
-              
-              // Method 1: Direct text search
-              const walletRegex = /0x[a-fA-F0-9]{40}/g;
-              const textMatches = allText.match(walletRegex);
-              const htmlMatches = allHTML.match(walletRegex);
-              
-              if (textMatches && textMatches.length > 0) {
-                const walletAddress = textMatches[0];
-                console.log('✅ Enhanced detection: Wallet found in text:', walletAddress);
-                sendWalletToBackend(walletAddress);
-                return walletAddress;
-              }
-              
-              if (htmlMatches && htmlMatches.length > 0) {
-                const walletAddress = htmlMatches[0];
-                console.log('✅ Enhanced detection: Wallet found in HTML:', walletAddress);
-                sendWalletToBackend(walletAddress);
-                return walletAddress;
-              }
-              
-              // Method 2: Look for specific x402 elements
-              const possibleSelectors = [
-                '[data-wallet]',
-                '.wallet-address',
-                '[class*="wallet"]',
-                '[id*="wallet"]',
-                '[class*="address"]',
-                '[id*="address"]',
-                'span', 'div', 'p', 'strong', 'b'
-              ];
-              
-              for (const selector of possibleSelectors) {
-                const elements = iframeDoc.querySelectorAll(selector);
-                elements.forEach(element => {
-                  const text = element.textContent || element.innerText;
-                  if (text && text.includes('0x') && text.length > 40) {
-                    const match = text.match(/0x[a-fA-F0-9]{40}/);
-                    if (match) {
-                      const walletAddress = match[0];
-                      console.log('✅ Enhanced detection: Wallet found in element:', walletAddress);
-                      sendWalletToBackend(walletAddress);
-                      return walletAddress;
-                    }
-                  }
-                });
-              }
-            }
-          } catch (e) {
-            console.log('🔒 Enhanced monitoring: Cross-origin error');
-          }
-          
+          console.log('⚠️ Legacy enhanced monitoring - use blockchain monitoring instead');
           return null;
         }
         
