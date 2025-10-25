@@ -403,13 +403,15 @@ app.get("/blockchain-transactions", async (c) => {
     console.log('📊 BaseScan response:', JSON.stringify(data, null, 2));
     
     if (data.status === '1' && data.result) {
-      // Filter for USDC transactions (excluding 0.01 USDC test payments)
+      // Filter for USDC transactions (incoming only, excluding 0.01 USDC test payments)
       const usdcTransactions = data.result.filter(tx => {
         const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
+        const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
         const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
         
-        return isUsdc && isNotTest;
+        return isUsdc && isIncoming && isNotOutgoing && isNotTest;
       });
       
       console.log('✅ Found USDC transactions (>=0.1 USDC):', usdcTransactions.length);
@@ -460,14 +462,22 @@ app.post("/sync-blockchain", async (c) => {
     console.log('📊 API Response Data:', JSON.stringify(data, null, 2));
     
     if (data.status === '1' && data.result) {
-      // Filter for USDC transactions TO our wallet (incoming payments)
+      // Filter for USDC transactions TO our wallet (incoming payments only)
       const usdcTransactions = data.result.filter(tx => {
         const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
-        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
+        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
+        const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
         const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
         
-        return isUsdc && isIncoming && isNotTest;
+        console.log(`🔍 Transaction: ${tx.hash}`);
+        console.log(`   From: ${tx.from}`);
+        console.log(`   To: ${tx.to}`);
+        console.log(`   Amount: ${amountUsdc} USDC`);
+        console.log(`   Is Incoming: ${isIncoming}`);
+        console.log(`   Is Not Outgoing: ${isNotOutgoing}`);
+        
+        return isUsdc && isIncoming && isNotOutgoing && isNotTest;
       });
       
       console.log('✅ Found incoming USDC transactions (>=0.1 USDC):', usdcTransactions.length);
@@ -644,14 +654,22 @@ app.post("/sync-all-historical", async (c) => {
     console.log('📊 Total transactions found:', data.result ? data.result.length : 0);
     
     if (data.status === '1' && data.result) {
-      // Filter for USDC transactions TO our wallet (incoming payments)
+      // Filter for USDC transactions TO our wallet (incoming payments only)
       const usdcTransactions = data.result.filter(tx => {
         const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
-        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
+        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
+        const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
         const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
         
-        return isUsdc && isIncoming && isNotTest;
+        console.log(`🔍 Transaction: ${tx.hash}`);
+        console.log(`   From: ${tx.from}`);
+        console.log(`   To: ${tx.to}`);
+        console.log(`   Amount: ${amountUsdc} USDC`);
+        console.log(`   Is Incoming: ${isIncoming}`);
+        console.log(`   Is Not Outgoing: ${isNotOutgoing}`);
+        
+        return isUsdc && isIncoming && isNotOutgoing && isNotTest;
       });
       
       console.log('✅ Found incoming USDC transactions (>=0.1 USDC):', usdcTransactions.length);
@@ -765,10 +783,12 @@ app.get("/test-blockchain", async (c) => {
     if (data.status === '1' && data.result) {
       const usdcTransactions = data.result.filter(tx => {
         const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
+        const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
         const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
         
-        return isUsdc && isNotTest;
+        return isUsdc && isIncoming && isNotOutgoing && isNotTest;
       });
       
       return c.json({
