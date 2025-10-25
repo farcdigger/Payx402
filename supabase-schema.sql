@@ -6,6 +6,8 @@ CREATE TABLE payments (
   wallet_address TEXT NOT NULL,
   amount_usdc DECIMAL(18,6) NOT NULL,
   amount_payx BIGINT NOT NULL,
+  transaction_hash TEXT,
+  block_number TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

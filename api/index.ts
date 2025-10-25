@@ -376,6 +376,131 @@ app.post("/test-payment", async (c) => {
   }
 });
 
+// Get USDC transactions from BaseScan API
+app.get("/blockchain-transactions", async (c) => {
+  try {
+    const walletAddress = "0xda8d766bc482a7953b72283f56c12ce00da6a86a";
+    
+    console.log('🔍 Fetching transactions from BaseScan for wallet:', walletAddress);
+    
+    // BaseScan API endpoint for token transactions
+    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=YourApiKeyToken`;
+    
+    const response = await fetch(baseScanUrl);
+    const data = await response.json();
+    
+    if (data.status === '1' && data.result) {
+      // Filter for USDC transactions (USDC contract: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
+      const usdcTransactions = data.result.filter(tx => 
+        tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+      );
+      
+      console.log('✅ Found USDC transactions:', usdcTransactions.length);
+      
+      return c.json({
+        success: true,
+        wallet: walletAddress,
+        totalTransactions: usdcTransactions.length,
+        transactions: usdcTransactions.slice(0, 10), // Last 10 transactions
+        message: "Blockchain transactions fetched successfully"
+      });
+    } else {
+      return c.json({
+        success: false,
+        error: "Failed to fetch transactions from BaseScan",
+        data: data
+      });
+    }
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: `Blockchain fetch error: ${error.message}`
+    });
+  }
+});
+
+// Sync blockchain transactions to Supabase
+app.post("/sync-blockchain", async (c) => {
+  try {
+    const walletAddress = "0xda8d766bc482a7953b72283f56c12ce00da6a86a";
+    
+    console.log('🔄 Syncing blockchain transactions to Supabase...');
+    
+    // Get transactions from BaseScan
+    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=YourApiKeyToken`;
+    
+    const response = await fetch(baseScanUrl);
+    const data = await response.json();
+    
+    if (data.status === '1' && data.result) {
+      // Filter for USDC transactions
+      const usdcTransactions = data.result.filter(tx => 
+        tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+      );
+      
+      console.log('✅ Found USDC transactions:', usdcTransactions.length);
+      
+      // Send to Supabase
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && supabaseKey) {
+        let syncedCount = 0;
+        
+        for (const tx of usdcTransactions.slice(0, 20)) { // Sync last 20 transactions
+          try {
+            // Convert from wei to USDC (USDC has 6 decimals)
+            const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+            const amountPayx = amountUsdc * 20000; // 1 USDC = 20,000 PAYX
+            
+            const supabaseResponse = await fetch(`${supabaseUrl}/rest/v1/payments`, {
+              method: 'POST',
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify({
+                wallet_address: tx.from,
+                amount_usdc: amountUsdc,
+                amount_payx: amountPayx,
+                transaction_hash: tx.hash,
+                block_number: tx.blockNumber,
+                created_at: new Date(parseInt(tx.timeStamp) * 1000).toISOString()
+              })
+            });
+            
+            if (supabaseResponse.ok) {
+              syncedCount++;
+              console.log(`✅ Synced transaction: ${tx.hash}`);
+            }
+          } catch (error) {
+            console.log(`❌ Failed to sync transaction: ${tx.hash}`, error);
+          }
+        }
+        
+        return c.json({
+          success: true,
+          message: `Synced ${syncedCount} transactions to Supabase`,
+          totalFound: usdcTransactions.length,
+          synced: syncedCount
+        });
+      }
+    }
+    
+    return c.json({
+      success: false,
+      error: "Failed to fetch or sync transactions"
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: `Sync error: ${error.message}`
+    });
+  }
+});
+
 // Simple info page with links to protected endpoints
 app.get("/", (c) => {
   // Vercel optimization - faster response
