@@ -657,16 +657,24 @@ app.get("/", (c) => {
             <button class="modal-close" onclick="closePaymentModal()">✕ CLOSE</button>
           </div>
           <div class="modal-body">
-            <!-- Wallet Address Input -->
-            <div id="walletInputSection" style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
-              <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 REQUIRED: Enter Your Wallet Address</h4>
-              <p style="font-size: 10px; color: #ff4d4d; margin-bottom: 15px; text-align: center; background: #001d3d; padding: 10px; border: 2px solid #ff4d4d;">
-                <strong>⚠️ WARNING:</strong> You must enter your wallet address to receive PAYX tokens!
-              </p>
-              <input type="text" id="paymentWalletInput" placeholder="0x1234567890abcdef..." style="width: 100%; padding: 15px; margin-bottom: 15px; font-family: 'Press Start 2P', monospace; font-size: 12px; background: #001d3d; color: #0052FF; border: 3px solid #2ecc71; text-align: center;">
-              <p style="font-size: 9px; color: #4d94ff; margin-bottom: 15px; text-align: center;">This address will receive your PAYX tokens after payment</p>
-              <button onclick="startPayment()" style="background: #2ecc71; border: 4px solid #000; color: #000; padding: 15px 30px; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0px #000; width: 100%; font-weight: bold;">🚀 START PAYMENT</button>
-            </div>
+                   <!-- Wallet Address Input -->
+                   <div id="walletInputSection" style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
+                     <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 REQUIRED: Connect Your Wallet</h4>
+                     <p style="font-size: 10px; color: #4d94ff; margin-bottom: 15px; text-align: center; background: #001d3d; padding: 10px; border: 2px solid #4d94ff;">
+                       <strong>💡 TIP:</strong> Connect your wallet automatically or enter address manually
+                     </p>
+                     
+                     <!-- Connect Wallet Button -->
+                     <button onclick="connectWallet()" id="connectWalletBtn" style="background: #0052FF; border: 3px solid #000; color: #fff; padding: 12px 20px; font-size: 11px; cursor: pointer; box-shadow: 3px 3px 0px #000; width: 100%; margin-bottom: 15px; font-weight: bold;">🔗 CONNECT WALLET</button>
+                     
+                     <!-- Manual Input -->
+                     <div id="manualInputSection" style="display: none;">
+                       <input type="text" id="paymentWalletInput" placeholder="Enter wallet address manually (0x...)" style="width: 100%; padding: 15px; margin-bottom: 15px; font-family: 'Press Start 2P', monospace; font-size: 12px; background: #001d3d; color: #0052FF; border: 3px solid #ff4d4d; text-align: center;">
+                       <p style="font-size: 9px; color: #4d94ff; margin-bottom: 15px; text-align: center;">This address will receive your PAYX tokens after payment</p>
+                     </div>
+                     
+                     <button onclick="startPayment()" id="startPaymentBtn" style="background: #2ecc71; border: 4px solid #000; color: #000; padding: 15px 30px; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0px #000; width: 100%; font-weight: bold; display: none;">🚀 START PAYMENT</button>
+                   </div>
             <iframe id="paymentIframe" class="modal-iframe" src="about:blank" style="display: none;"></iframe>
           </div>
         </div>
@@ -722,13 +730,182 @@ app.get("/", (c) => {
           walletInputSection.style.display = 'block';
           iframe.style.display = 'none';
           
-          // Don't load iframe yet - wait for wallet input
+          // Try to auto-detect wallet address
+          autoDetectWallet();
           
           // Show modal
           modal.classList.add('active');
           
           // Prevent body scroll
           document.body.style.overflow = 'hidden';
+        }
+        
+        // Connect wallet function
+        async function connectWallet() {
+          const connectBtn = document.getElementById('connectWalletBtn');
+          const manualSection = document.getElementById('manualInputSection');
+          const startBtn = document.getElementById('startPaymentBtn');
+          const walletInput = document.getElementById('paymentWalletInput');
+          
+          // Show loading state
+          connectBtn.innerHTML = '🔄 Connecting...';
+          connectBtn.disabled = true;
+          
+          try {
+            // Check if MetaMask is installed
+            if (typeof window.ethereum !== 'undefined') {
+              // Request account access
+              const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+              
+              if (accounts && accounts.length > 0) {
+                const walletAddress = accounts[0];
+                walletInput.value = walletAddress;
+                
+                // Show success state
+                connectBtn.innerHTML = '✅ Wallet Connected: ' + walletAddress.substring(0, 6) + '...' + walletAddress.substring(38);
+                connectBtn.style.background = '#2ecc71';
+                connectBtn.style.color = '#000';
+                
+                // Show manual input section with connected wallet
+                manualSection.style.display = 'block';
+                walletInput.style.border = '3px solid #2ecc71';
+                walletInput.style.background = '#001d3d';
+                
+                // Show start payment button
+                startBtn.style.display = 'block';
+                
+                // Add success message
+                const successMsg = document.createElement('div');
+                successMsg.innerHTML = '🎉 Wallet connected successfully! You can now proceed with payment.';
+                successMsg.style.color = '#2ecc71';
+                successMsg.style.fontSize = '10px';
+                successMsg.style.marginTop = '10px';
+                successMsg.style.textAlign = 'center';
+                successMsg.style.background = '#001d3d';
+                successMsg.style.padding = '8px';
+                successMsg.style.border = '2px solid #2ecc71';
+                
+                // Remove existing success message
+                const existingMsg = manualSection.querySelector('.wallet-success');
+                if (existingMsg) existingMsg.remove();
+                
+                successMsg.className = 'wallet-success';
+                manualSection.appendChild(successMsg);
+                
+                return true;
+              }
+            } else {
+              // MetaMask not installed
+              connectBtn.innerHTML = '❌ MetaMask Not Found';
+              connectBtn.style.background = '#ff4d4d';
+              connectBtn.style.color = '#fff';
+              
+              // Show manual input option
+              manualSection.style.display = 'block';
+              startBtn.style.display = 'block';
+              
+              // Show error message
+              const errorMsg = document.createElement('div');
+              errorMsg.innerHTML = '⚠️ MetaMask not detected. Please enter your wallet address manually.';
+              errorMsg.style.color = '#ff4d4d';
+              errorMsg.style.fontSize = '10px';
+              errorMsg.style.marginTop = '10px';
+              errorMsg.style.textAlign = 'center';
+              errorMsg.style.background = '#001d3d';
+              errorMsg.style.padding = '8px';
+              errorMsg.style.border = '2px solid #ff4d4d';
+              
+              // Remove existing error message
+              const existingMsg = manualSection.querySelector('.wallet-error');
+              if (existingMsg) existingMsg.remove();
+              
+              errorMsg.className = 'wallet-error';
+              manualSection.appendChild(errorMsg);
+            }
+          } catch (error) {
+            console.log('Wallet connection failed:', error);
+            
+            // Show error state
+            connectBtn.innerHTML = '❌ Connection Failed';
+            connectBtn.style.background = '#ff4d4d';
+            connectBtn.style.color = '#fff';
+            
+            // Show manual input option
+            manualSection.style.display = 'block';
+            startBtn.style.display = 'block';
+            
+            // Show error message
+            const errorMsg = document.createElement('div');
+            errorMsg.innerHTML = '⚠️ Wallet connection failed. Please enter your wallet address manually.';
+            errorMsg.style.color = '#ff4d4d';
+            errorMsg.style.fontSize = '10px';
+            errorMsg.style.marginTop = '10px';
+            errorMsg.style.textAlign = 'center';
+            errorMsg.style.background = '#001d3d';
+            errorMsg.style.padding = '8px';
+            errorMsg.style.border = '2px solid #ff4d4d';
+            
+            // Remove existing error message
+            const existingMsg = manualSection.querySelector('.wallet-error');
+            if (existingMsg) existingMsg.remove();
+            
+            errorMsg.className = 'wallet-error';
+            manualSection.appendChild(errorMsg);
+          }
+          
+          // Re-enable button after 3 seconds
+          setTimeout(() => {
+            connectBtn.disabled = false;
+            if (connectBtn.innerHTML.includes('🔄')) {
+              connectBtn.innerHTML = '🔗 CONNECT WALLET';
+              connectBtn.style.background = '#0052FF';
+              connectBtn.style.color = '#fff';
+            }
+          }, 3000);
+        }
+        
+        // Auto-detect wallet address (fallback)
+        async function autoDetectWallet() {
+          const walletInput = document.getElementById('paymentWalletInput');
+          
+          // Try to get wallet from MetaMask or other providers
+          if (typeof window.ethereum !== 'undefined') {
+            try {
+              // Request account access
+              const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+              if (accounts && accounts.length > 0) {
+                walletInput.value = accounts[0];
+                walletInput.style.border = '3px solid #2ecc71';
+                walletInput.style.background = '#001d3d';
+                
+                // Show success message
+                const successMsg = document.createElement('div');
+                successMsg.innerHTML = '✅ Wallet detected: ' + accounts[0].substring(0, 6) + '...' + accounts[0].substring(38);
+                successMsg.style.color = '#2ecc71';
+                successMsg.style.fontSize = '10px';
+                successMsg.style.marginTop = '5px';
+                successMsg.style.textAlign = 'center';
+                
+                // Remove existing success message
+                const existingMsg = walletInput.parentNode.querySelector('.wallet-success');
+                if (existingMsg) existingMsg.remove();
+                
+                successMsg.className = 'wallet-success';
+                walletInput.parentNode.appendChild(successMsg);
+                
+                return true;
+              }
+            } catch (error) {
+              console.log('Wallet connection failed:', error);
+            }
+          }
+          
+          // If no wallet detected, show manual input option
+          walletInput.placeholder = 'Enter wallet address manually (0x...)';
+          walletInput.style.border = '3px solid #ff4d4d';
+          walletInput.style.background = '#001d3d';
+          
+          return false;
         }
         
         function startPayment() {
