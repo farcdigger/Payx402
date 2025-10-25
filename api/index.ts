@@ -540,6 +540,73 @@ app.post("/sync-blockchain", async (c) => {
   }
 });
 
+// Dashboard endpoint - Supabase'de düzenli görüntüleme
+app.get("/dashboard", async (c) => {
+  if (!process.env.SUPABASE_URL) {
+    return c.json({ success: false, error: 'Supabase not configured' });
+  }
+
+  try {
+    // Get all payments grouped by wallet
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments?select=*&order=created_at.desc`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'apikey': process.env.SUPABASE_ANON_KEY
+      }
+    });
+
+    if (response.ok) {
+      const payments = await response.json();
+      
+      // Group by wallet address
+      const walletStats = {};
+      
+      payments.forEach(payment => {
+        const wallet = payment.wallet_address;
+        if (!walletStats[wallet]) {
+          walletStats[wallet] = {
+            wallet_address: wallet,
+            total_usdc: 0,
+            total_payx: 0,
+            payment_count: 0,
+            first_payment: null,
+            last_payment: null,
+            payments: []
+          };
+        }
+        
+        walletStats[wallet].total_usdc += payment.amount_usdc;
+        walletStats[wallet].total_payx += payment.amount_payx;
+        walletStats[wallet].payment_count++;
+        walletStats[wallet].payments.push(payment);
+        
+        if (!walletStats[wallet].first_payment || payment.created_at < walletStats[wallet].first_payment) {
+          walletStats[wallet].first_payment = payment.created_at;
+        }
+        if (!walletStats[wallet].last_payment || payment.created_at > walletStats[wallet].last_payment) {
+          walletStats[wallet].last_payment = payment.created_at;
+        }
+      });
+      
+      // Convert to array and sort by total USDC
+      const sortedWallets = Object.values(walletStats).sort((a, b) => b.total_usdc - a.total_usdc);
+      
+      return c.json({
+        success: true,
+        total_wallets: sortedWallets.length,
+        total_payments: payments.length,
+        total_usdc: payments.reduce((sum, p) => sum + p.amount_usdc, 0),
+        total_payx: payments.reduce((sum, p) => sum + p.amount_payx, 0),
+        wallets: sortedWallets
+      });
+    }
+  } catch (error) {
+    console.error('Dashboard fetch error:', error);
+  }
+
+  return c.json({ success: false, error: 'Failed to fetch dashboard data' });
+});
+
 // Test blockchain connection with API key
 app.get("/test-blockchain", async (c) => {
   try {
@@ -1016,9 +1083,10 @@ app.get("/", (c) => {
       <div id="coinRain" class="coin-rain"></div>
       
       <script>
-        let currentPaymentUrl = '';
-        let currentPaymentTitle = '';
-        let currentPaymentType = '';
+               let currentPaymentUrl = '';
+               let currentPaymentTitle = '';
+               let currentPaymentType = '';
+               let currentUserWallet = null; // Kullanıcının cüzdan adresi
         
         // Define openPaymentModal function
         function openPaymentModal(url, title, type) {
@@ -1164,8 +1232,20 @@ app.get("/", (c) => {
             
             if (data.success) {
               console.log('✅ Blockchain sync successful:', data.message);
-              if (data.synced > 0) {
-                showSuccessOverlay();
+              
+              // Sadece kullanıcının kendi işlemi için başarı mesajı göster
+              if (data.synced > 0 && data.transactions) {
+                // Yeni sync edilen transaction'ları kontrol et
+                const hasUserTransaction = data.transactions.some(tx => 
+                  currentUserWallet && tx.from && tx.from.toLowerCase() === currentUserWallet.toLowerCase()
+                );
+                
+                if (hasUserTransaction) {
+                  console.log('🎉 User transaction detected! Showing success overlay...');
+                  showSuccessOverlay();
+                } else {
+                  console.log('📊 Other users transactions detected, not showing success overlay');
+                }
               }
             } else {
               console.log('❌ Blockchain sync failed:', data.error);
@@ -1326,14 +1406,14 @@ app.get("/", (c) => {
           // Check if message contains wallet address
           if (event.data && event.data.wallet) {
             console.log('✅ Wallet address received via postMessage:', event.data.wallet);
-            sendWalletToBackend(event.data.wallet);
+            currentUserWallet = event.data.wallet; // Kullanıcının cüzdan adresini sakla
           }
           
           // Check if message contains payment success
           if (event.data && event.data.success) {
             console.log('✅ Payment success received via postMessage');
             if (event.data.wallet) {
-              sendPaymentConfirmation(event.data.wallet);
+              currentUserWallet = event.data.wallet; // Kullanıcının cüzdan adresini sakla
             }
             showSuccessOverlay();
           }
@@ -1406,6 +1486,9 @@ app.get("/", (c) => {
             alert('Please enter a valid wallet address (0x...)');
             return;
           }
+          
+          // Kullanıcının cüzdan adresini sakla
+          currentUserWallet = walletAddress;
           
           try {
             balanceResult.style.display = 'block';
