@@ -383,8 +383,8 @@ app.get("/blockchain-transactions", async (c) => {
     
     console.log('🔍 Fetching transactions from BaseScan for wallet:', walletAddress);
     
-    // BaseScan API endpoint for token transactions (no API key needed for basic requests)
-    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc`;
+    // BaseScan API endpoint for token transactions with API key
+    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     console.log('📡 BaseScan URL:', baseScanUrl);
     
@@ -434,8 +434,8 @@ app.post("/sync-blockchain", async (c) => {
     
     console.log('🔄 Syncing blockchain transactions to Supabase...');
     
-    // Get transactions from BaseScan (no API key needed for basic requests)
-    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc`;
+    // Get transactions from BaseScan with API key
+    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     const response = await fetch(baseScanUrl);
     const data = await response.json();
@@ -505,6 +505,57 @@ app.post("/sync-blockchain", async (c) => {
     return c.json({
       success: false,
       error: `Sync error: ${error.message}`
+    });
+  }
+});
+
+// Test blockchain connection with API key
+app.get("/test-blockchain", async (c) => {
+  try {
+    const walletAddress = "0xda8d766bc482a7953b72283f56c12ce00da6a86a";
+    const apiKey = "SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q";
+    
+    console.log('🧪 Testing blockchain connection with API key...');
+    
+    // Test with API key
+    const baseScanUrl = `https://api.basescan.org/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`;
+    
+    console.log('📡 Testing URL:', baseScanUrl);
+    
+    const response = await fetch(baseScanUrl);
+    const data = await response.json();
+    
+    console.log('📊 API Response:', JSON.stringify(data, null, 2));
+    
+    if (data.status === '1' && data.result) {
+      const usdcTransactions = data.result.filter(tx => 
+        tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+      );
+      
+      return c.json({
+        success: true,
+        message: "Blockchain connection successful!",
+        wallet: walletAddress,
+        totalTransactions: data.result.length,
+        usdcTransactions: usdcTransactions.length,
+        sampleTransaction: usdcTransactions[0] || null,
+        apiKey: apiKey.substring(0, 10) + '...',
+        rawData: data
+      });
+    } else {
+      return c.json({
+        success: false,
+        error: "Blockchain API failed",
+        status: data.status,
+        message: data.message,
+        rawData: data
+      });
+    }
+  } catch (error) {
+    console.log('❌ Blockchain test error:', error);
+    return c.json({
+      success: false,
+      error: `Blockchain test error: ${error.message}`
     });
   }
 });
