@@ -1083,10 +1083,10 @@ app.get("/", (c) => {
       <div id="coinRain" class="coin-rain"></div>
       
       <script>
-               let currentPaymentUrl = '';
-               let currentPaymentTitle = '';
-               let currentPaymentType = '';
-               let currentUserWallet = null; // Kullanıcının cüzdan adresi
+        let currentPaymentUrl = '';
+        let currentPaymentTitle = '';
+        let currentPaymentType = '';
+        let currentUserWallet = null; // Kullanıcının cüzdan adresi
         
         // Define openPaymentModal function
         function openPaymentModal(url, title, type) {
@@ -1191,8 +1191,8 @@ app.get("/", (c) => {
           setTimeout(() => startBlockchainMonitoring(), 1000);
         }
         
-               // Blockchain monitoring function
-               function startBlockchainMonitoring() {
+        // Blockchain monitoring function
+        function startBlockchainMonitoring() {
                  console.log('🔍 Starting blockchain monitoring...');
                  
                  // Monitor for 10 minutes
