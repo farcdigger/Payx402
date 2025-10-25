@@ -900,7 +900,7 @@ app.get("/", (c) => {
           </div>
           <div class="modal-body">
                    <!-- Payment Info -->
-                   <div id="paymentInfoSection" style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
+                   <div style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
                      <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 PAYMENT SYSTEM</h4>
                      <p style="font-size: 10px; color: #4d94ff; margin-bottom: 15px; text-align: center; background: #001d3d; padding: 10px; border: 2px solid #4d94ff;">
                        <strong>🔗 BLOCKCHAIN TRACKING:</strong> Your payments are automatically tracked from blockchain. No manual input required!
@@ -913,9 +913,7 @@ app.get("/", (c) => {
                          ✅ Secure payment verification<br>
                          ✅ No manual wallet input needed
                        </p>
-          </div>
-                     
-                     <button onclick="startPayment()" id="startPaymentBtn" style="background: #2ecc71; border: 4px solid #000; color: #000; padding: 15px 30px; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0px #000; width: 100%; font-weight: bold;">🚀 START PAYMENT</button>
+                     </div>
                    </div>
             <iframe id="paymentIframe" class="modal-iframe" src="about:blank" style="display: none;"></iframe>
           </div>
@@ -950,7 +948,6 @@ app.get("/", (c) => {
           const modalContent = document.getElementById('modalContent');
           const modalTitle = document.getElementById('modalTitle');
           const iframe = document.getElementById('paymentIframe');
-          const walletInputSection = document.getElementById('walletInputSection');
           
           // Store payment info
           currentPaymentUrl = url;
@@ -968,17 +965,14 @@ app.get("/", (c) => {
             modalContent.classList.add('premium');
           }
           
-          // Show both wallet input and iframe
-          walletInputSection.style.display = 'block';
+          // Show iframe directly
           iframe.style.display = 'block';
           
-          // Load payment directly - x402 will handle wallet connection
-          // Add a random parameter to track this payment session
-          const sessionId = Date.now();
-          iframe.src = url + '?session=' + sessionId;
+          // Load payment directly - blockchain will track automatically
+          iframe.src = url;
           
-          // Start monitoring for payment success and wallet address
-          setTimeout(() => startPaymentMonitoring(), 1000);
+          // Start blockchain monitoring
+          setTimeout(() => startBlockchainMonitoring(), 1000);
           
           // Show modal
           modal.classList.add('active');
@@ -987,128 +981,9 @@ app.get("/", (c) => {
           document.body.style.overflow = 'hidden';
         }
         
-        // Connect wallet function
+        // Legacy connect wallet function (kept for compatibility)
         async function connectWallet() {
-          const connectBtn = document.getElementById('connectWalletBtn');
-          const manualSection = document.getElementById('manualInputSection');
-          const startBtn = document.getElementById('startPaymentBtn');
-          const walletInput = document.getElementById('paymentWalletInput');
-          
-          // Show loading state
-          connectBtn.innerHTML = '🔄 Connecting...';
-          connectBtn.disabled = true;
-          
-          try {
-            // Check if MetaMask is installed
-            if (typeof window.ethereum !== 'undefined') {
-              // Request account access
-              const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-              
-              if (accounts && accounts.length > 0) {
-                const walletAddress = accounts[0];
-                walletInput.value = walletAddress;
-                
-                // Show success state
-                connectBtn.innerHTML = '✅ Wallet Connected: ' + walletAddress.substring(0, 6) + '...' + walletAddress.substring(38);
-                connectBtn.style.background = '#2ecc71';
-                connectBtn.style.color = '#000';
-                
-                // Show manual input section with connected wallet
-                manualSection.style.display = 'block';
-                walletInput.style.border = '3px solid #2ecc71';
-                walletInput.style.background = '#001d3d';
-                
-                // Show start payment button
-                startBtn.style.display = 'block';
-                
-                // Add success message
-                const successMsg = document.createElement('div');
-                successMsg.innerHTML = '🎉 Wallet connected successfully! You can now proceed with payment.';
-                successMsg.style.color = '#2ecc71';
-                successMsg.style.fontSize = '10px';
-                successMsg.style.marginTop = '10px';
-                successMsg.style.textAlign = 'center';
-                successMsg.style.background = '#001d3d';
-                successMsg.style.padding = '8px';
-                successMsg.style.border = '2px solid #2ecc71';
-                
-                // Remove existing success message
-                const existingMsg = manualSection.querySelector('.wallet-success');
-                if (existingMsg) existingMsg.remove();
-                
-                successMsg.className = 'wallet-success';
-                manualSection.appendChild(successMsg);
-                
-                return true;
-              }
-            } else {
-              // MetaMask not installed
-              connectBtn.innerHTML = '❌ MetaMask Not Found';
-              connectBtn.style.background = '#ff4d4d';
-              connectBtn.style.color = '#fff';
-              
-              // Show manual input option
-              manualSection.style.display = 'block';
-              startBtn.style.display = 'block';
-              
-              // Show error message
-              const errorMsg = document.createElement('div');
-              errorMsg.innerHTML = '⚠️ MetaMask not detected. Please enter your wallet address manually.';
-              errorMsg.style.color = '#ff4d4d';
-              errorMsg.style.fontSize = '10px';
-              errorMsg.style.marginTop = '10px';
-              errorMsg.style.textAlign = 'center';
-              errorMsg.style.background = '#001d3d';
-              errorMsg.style.padding = '8px';
-              errorMsg.style.border = '2px solid #ff4d4d';
-              
-              // Remove existing error message
-              const existingMsg = manualSection.querySelector('.wallet-error');
-              if (existingMsg) existingMsg.remove();
-              
-              errorMsg.className = 'wallet-error';
-              manualSection.appendChild(errorMsg);
-            }
-          } catch (error) {
-            console.log('Wallet connection failed:', error);
-            
-            // Show error state
-            connectBtn.innerHTML = '❌ Connection Failed';
-            connectBtn.style.background = '#ff4d4d';
-            connectBtn.style.color = '#fff';
-            
-            // Show manual input option
-            manualSection.style.display = 'block';
-            startBtn.style.display = 'block';
-            
-            // Show error message
-            const errorMsg = document.createElement('div');
-            errorMsg.innerHTML = '⚠️ Wallet connection failed. Please enter your wallet address manually.';
-            errorMsg.style.color = '#ff4d4d';
-            errorMsg.style.fontSize = '10px';
-            errorMsg.style.marginTop = '10px';
-            errorMsg.style.textAlign = 'center';
-            errorMsg.style.background = '#001d3d';
-            errorMsg.style.padding = '8px';
-            errorMsg.style.border = '2px solid #ff4d4d';
-            
-            // Remove existing error message
-            const existingMsg = manualSection.querySelector('.wallet-error');
-            if (existingMsg) existingMsg.remove();
-            
-            errorMsg.className = 'wallet-error';
-            manualSection.appendChild(errorMsg);
-          }
-          
-          // Re-enable button after 3 seconds
-          setTimeout(() => {
-            connectBtn.disabled = false;
-            if (connectBtn.innerHTML.includes('🔄')) {
-              connectBtn.innerHTML = '🔗 CONNECT WALLET';
-              connectBtn.style.background = '#0052FF';
-              connectBtn.style.color = '#fff';
-            }
-          }, 3000);
+          console.log('⚠️ Legacy connect wallet - use blockchain monitoring instead');
         }
         
         // Auto-detect wallet address (fallback)
@@ -1156,11 +1031,9 @@ app.get("/", (c) => {
         }
         
         function startPayment() {
-          const paymentInfoSection = document.getElementById('paymentInfoSection');
           const iframe = document.getElementById('paymentIframe');
           
-          // Hide payment info, show iframe
-          paymentInfoSection.style.display = 'none';
+          // Show iframe directly
           iframe.style.display = 'block';
           
           // Load payment directly - blockchain will track automatically
