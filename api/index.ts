@@ -486,6 +486,22 @@ app.post("/sync-blockchain", async (c) => {
             console.log(`👤 From: ${tx.from}`);
             console.log(`📅 Time: ${new Date(parseInt(tx.timeStamp) * 1000).toISOString()}`);
             
+            // Check if transaction already exists
+            const checkResponse = await fetch(`${supabaseUrl}/rest/v1/payments?transaction_hash=eq.${tx.hash}&select=id`, {
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`
+              }
+            });
+            
+            if (checkResponse.ok) {
+              const existingTransactions = await checkResponse.json();
+              if (existingTransactions.length > 0) {
+                console.log(`⏭️ Transaction already exists: ${tx.hash}`);
+                continue; // Skip this transaction
+              }
+            }
+            
             const supabaseResponse = await fetch(`${supabaseUrl}/rest/v1/payments`, {
               method: 'POST',
               headers: {
