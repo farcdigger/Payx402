@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node api/index.ts",
-    "start": "node api/index.ts"
+    "dev": "npx tsx api/index.ts",
+    "start": "npx tsx api/index.ts"
   },
   "dependencies": {
     "@coinbase/x402": "^0.6.6",
@@ -12,5 +12,8 @@
     "dotenv": "^17.2.3",
     "hono": "^4.10.3",
     "x402-hono": "^0.6.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
   }
 }
