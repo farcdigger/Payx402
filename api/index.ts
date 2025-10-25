@@ -218,6 +218,81 @@ app.get("/balance/:walletAddress", async (c) => {
   return c.json({ success: false, error: 'Failed to fetch balance' });
 });
 
+// Track wallet address from x402 payment
+app.post("/track-wallet", async (c) => {
+  try {
+    const { wallet, paymentUrl, paymentType } = await c.req.json();
+    
+    console.log('Tracking wallet:', wallet, 'for payment:', paymentUrl);
+    
+    // Store wallet address for this payment session
+    // This will be used when payment is confirmed
+    return c.json({ success: true, message: "Wallet address tracked" });
+  } catch (error) {
+    return c.json({ success: false, error: error.message });
+  }
+});
+
+// Payment confirmation from x402
+app.post("/payment-confirmation", async (c) => {
+  try {
+    const { wallet, paymentUrl, paymentType, status } = await c.req.json();
+    
+    console.log('Payment confirmation received:', { wallet, paymentUrl, paymentType, status });
+    
+    // Determine payment amount based on URL
+    let amountUsdc = 0;
+    let amountPayx = 0;
+    
+    if (paymentUrl.includes('/payment/5usdc')) {
+      amountUsdc = 5;
+      amountPayx = 100000;
+    } else if (paymentUrl.includes('/payment/10usdc')) {
+      amountUsdc = 10;
+      amountPayx = 200000;
+    } else if (paymentUrl.includes('/payment/100usdc')) {
+      amountUsdc = 100;
+      amountPayx = 2000000;
+    } else if (paymentUrl.includes('/payment/test')) {
+      amountUsdc = 0.01;
+      amountPayx = 50;
+    }
+    
+    // Send to Supabase
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    
+    if (supabaseUrl && supabaseKey && wallet) {
+      const response = await fetch(`${supabaseUrl}/rest/v1/payments`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          wallet_address: wallet,
+          amount_usdc: amountUsdc,
+          amount_payx: amountPayx
+        })
+      });
+      
+      if (response.ok) {
+        console.log('Payment recorded in Supabase:', { wallet, amountUsdc, amountPayx });
+        return c.json({ success: true, message: "Payment recorded successfully" });
+      } else {
+        console.log('Failed to record payment in Supabase:', response.status);
+        return c.json({ success: false, error: "Failed to record payment" });
+      }
+    }
+    
+    return c.json({ success: true, message: "Payment confirmation received" });
+  } catch (error) {
+    return c.json({ success: false, error: error.message });
+  }
+});
+
 // Test Supabase connection
 app.get("/test-supabase", async (c) => {
   if (!process.env.SUPABASE_URL) {
@@ -726,12 +801,15 @@ app.get("/", (c) => {
             modalContent.classList.add('premium');
           }
           
-          // Show wallet input, hide iframe
-          walletInputSection.style.display = 'block';
-          iframe.style.display = 'none';
+          // Hide wallet input, show iframe directly
+          walletInputSection.style.display = 'none';
+          iframe.style.display = 'block';
           
-          // Try to auto-detect wallet address
-          autoDetectWallet();
+          // Load payment directly - x402 will handle wallet connection
+          iframe.src = url;
+          
+          // Start monitoring for payment success and wallet address
+          setTimeout(() => startPaymentMonitoring(), 1000);
           
           // Show modal
           modal.classList.add('active');
@@ -940,21 +1018,90 @@ app.get("/", (c) => {
         function startPaymentMonitoring() {
           const iframe = document.getElementById('paymentIframe');
           let checkInterval;
+          let walletAddress = null;
           
           checkInterval = setInterval(() => {
             try {
               const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
               if (iframeDoc && iframeDoc.body) {
                 const bodyText = iframeDoc.body.textContent || iframeDoc.body.innerText;
-                if (bodyText.includes('success') || bodyText.includes('confirmed') || bodyText.includes('complete')) {
+                
+                // Try to extract wallet address from x402 payment interface
+                if (bodyText.includes('0x') && bodyText.length > 40) {
+                  const addressMatch = bodyText.match(/0x[a-fA-F0-9]{40}/);
+                  if (addressMatch && !walletAddress) {
+                    walletAddress = addressMatch[0];
+                    console.log('Wallet address detected:', walletAddress);
+                    
+                    // Send wallet address to backend for tracking
+                    sendWalletToBackend(walletAddress);
+                  }
+                }
+                
+                // Check for payment success
+                if (bodyText.includes('success') || bodyText.includes('confirmed') || bodyText.includes('complete') || bodyText.includes('Payment successful')) {
                   clearInterval(checkInterval);
+                  
+                  // Send final payment confirmation with wallet address
+                  if (walletAddress) {
+                    sendPaymentConfirmation(walletAddress);
+                  }
+                  
                   showSuccessOverlay();
                 }
               }
             } catch (e) {
               // Cross-origin error, continue monitoring
+              console.log('Monitoring iframe...');
             }
           }, 2000);
+        }
+        
+        // Send wallet address to backend for tracking
+        async function sendWalletToBackend(walletAddress) {
+          try {
+            const response = await fetch('/track-wallet', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                wallet: walletAddress,
+                paymentUrl: currentPaymentUrl,
+                paymentType: currentPaymentType
+              })
+            });
+            
+            if (response.ok) {
+              console.log('Wallet address sent to backend:', walletAddress);
+            }
+          } catch (error) {
+            console.log('Failed to send wallet address:', error);
+          }
+        }
+        
+        // Send payment confirmation to backend
+        async function sendPaymentConfirmation(walletAddress) {
+          try {
+            const response = await fetch('/payment-confirmation', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                wallet: walletAddress,
+                paymentUrl: currentPaymentUrl,
+                paymentType: currentPaymentType,
+                status: 'completed'
+              })
+            });
+            
+            if (response.ok) {
+              console.log('Payment confirmation sent:', walletAddress);
+            }
+          } catch (error) {
+            console.log('Failed to send payment confirmation:', error);
+          }
         }
         
         // Success overlay function
