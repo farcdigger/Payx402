@@ -203,12 +203,18 @@ app.get("/balance/:walletAddress", async (c) => {
     if (response.ok) {
       const payments = await response.json();
       const totalPayx = payments.reduce((sum, p) => sum + p.amount_payx, 0);
+      const totalUsdc = payments.reduce((sum, p) => sum + p.amount_usdc, 0);
+      
+      console.log(`💰 Balance for ${walletAddress}: ${totalPayx} PAYX (${totalUsdc} USDC)`);
       
   return c.json({
     success: true,
         walletAddress,
         totalPayx,
-        payments
+        totalUsdc,
+        payments,
+        paymentCount: payments.length,
+        lastPayment: payments[0] || null
       });
     }
   } catch (error) {
@@ -441,12 +447,13 @@ app.post("/sync-blockchain", async (c) => {
     const data = await response.json();
     
     if (data.status === '1' && data.result) {
-      // Filter for USDC transactions
+      // Filter for USDC transactions TO our wallet (incoming payments)
       const usdcTransactions = data.result.filter(tx => 
-        tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+        tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' &&
+        tx.to.toLowerCase() === walletAddress.toLowerCase() // Only incoming transactions
       );
       
-      console.log('✅ Found USDC transactions:', usdcTransactions.length);
+      console.log('✅ Found incoming USDC transactions:', usdcTransactions.length);
       
       // Send to Supabase
       const supabaseUrl = process.env.SUPABASE_URL;
@@ -455,11 +462,16 @@ app.post("/sync-blockchain", async (c) => {
       if (supabaseUrl && supabaseKey) {
         let syncedCount = 0;
         
-        for (const tx of usdcTransactions.slice(0, 20)) { // Sync last 20 transactions
+        for (const tx of usdcTransactions.slice(0, 50)) { // Sync last 50 transactions
           try {
             // Convert from wei to USDC (USDC has 6 decimals)
             const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
             const amountPayx = amountUsdc * 20000; // 1 USDC = 20,000 PAYX
+            
+            console.log(`📊 Processing transaction: ${tx.hash}`);
+            console.log(`💰 Amount: ${amountUsdc} USDC → ${amountPayx} PAYX`);
+            console.log(`👤 From: ${tx.from}`);
+            console.log(`📅 Time: ${new Date(parseInt(tx.timeStamp) * 1000).toISOString()}`);
             
             const supabaseResponse = await fetch(`${supabaseUrl}/rest/v1/payments`, {
               method: 'POST',
@@ -470,7 +482,7 @@ app.post("/sync-blockchain", async (c) => {
                 'Prefer': 'return=minimal'
               },
               body: JSON.stringify({
-                wallet_address: tx.from,
+                wallet_address: tx.from, // Who sent the payment
                 amount_usdc: amountUsdc,
                 amount_payx: amountPayx,
                 transaction_hash: tx.hash,
@@ -481,7 +493,9 @@ app.post("/sync-blockchain", async (c) => {
             
             if (supabaseResponse.ok) {
               syncedCount++;
-              console.log(`✅ Synced transaction: ${tx.hash}`);
+              console.log(`✅ Synced transaction: ${tx.hash} from ${tx.from}`);
+            } else {
+              console.log(`❌ Failed to sync transaction: ${tx.hash}`, await supabaseResponse.text());
             }
           } catch (error) {
             console.log(`❌ Failed to sync transaction: ${tx.hash}`, error);
@@ -490,9 +504,10 @@ app.post("/sync-blockchain", async (c) => {
         
         return c.json({
           success: true,
-          message: `Synced ${syncedCount} transactions to Supabase`,
+          message: `Synced ${syncedCount} incoming USDC transactions to Supabase`,
           totalFound: usdcTransactions.length,
-          synced: syncedCount
+          synced: syncedCount,
+          transactions: usdcTransactions.slice(0, 5) // Show first 5 transactions
         });
       }
     }
@@ -1088,30 +1103,30 @@ app.get("/", (c) => {
           setTimeout(() => startBlockchainMonitoring(), 1000);
         }
         
-        // Blockchain monitoring function
-        function startBlockchainMonitoring() {
-          console.log('🔍 Starting blockchain monitoring...');
-          
-          // Monitor for 5 minutes
-          let monitoringAttempts = 0;
-          const maxAttempts = 150; // 5 minutes
-          
-          const checkInterval = setInterval(() => {
-            monitoringAttempts++;
-            console.log('📊 Blockchain monitoring attempt:', monitoringAttempts);
-            
-            // Sync blockchain transactions every 10 seconds
-            if (monitoringAttempts % 5 === 0) {
-              syncBlockchainTransactions();
-            }
-            
-            // Stop monitoring after max attempts
-            if (monitoringAttempts >= maxAttempts) {
-              console.log('⏰ Blockchain monitoring timeout reached');
-              clearInterval(checkInterval);
-            }
-          }, 2000);
-        }
+               // Blockchain monitoring function
+               function startBlockchainMonitoring() {
+                 console.log('🔍 Starting blockchain monitoring...');
+                 
+                 // Monitor for 10 minutes
+                 let monitoringAttempts = 0;
+                 const maxAttempts = 300; // 10 minutes
+                 
+                 const checkInterval = setInterval(() => {
+                   monitoringAttempts++;
+                   console.log('📊 Blockchain monitoring attempt:', monitoringAttempts);
+                   
+                   // Sync blockchain transactions every 5 seconds
+                   if (monitoringAttempts % 3 === 0) {
+                     syncBlockchainTransactions();
+                   }
+                   
+                   // Stop monitoring after max attempts
+                   if (monitoringAttempts >= maxAttempts) {
+                     console.log('⏰ Blockchain monitoring timeout reached');
+                     clearInterval(checkInterval);
+                   }
+                 }, 2000);
+               }
         
         // Sync blockchain transactions
         async function syncBlockchainTransactions() {
@@ -1215,7 +1230,20 @@ app.get("/", (c) => {
             
             if (data.success) {
               balanceAmount.textContent = \`\${data.totalPayx.toLocaleString()} PAYX\`;
-              balanceDetails.textContent = \`Wallet: \${walletAddress.substring(0, 6)}...\${walletAddress.substring(38)} | Payments: \${data.payments.length}\`;
+              balanceDetails.innerHTML = \`
+                <div style="color: #2ecc71; font-size: 12px; margin-bottom: 5px;">
+                  💰 Total: \${data.totalPayx.toLocaleString()} PAYX
+                </div>
+                <div style="color: #4d94ff; font-size: 10px;">
+                  💵 USDC Paid: \${data.totalUsdc.toFixed(2)} USDC
+                </div>
+                <div style="color: #4d94ff; font-size: 10px;">
+                  📊 Payments: \${data.paymentCount} transactions
+                </div>
+                <div style="color: #4d94ff; font-size: 10px;">
+                  🏠 Wallet: \${walletAddress.substring(0, 6)}...\${walletAddress.substring(38)}
+                </div>
+              \`;
             } else {
               balanceAmount.textContent = 'Error loading balance';
               balanceDetails.textContent = data.error || 'Failed to fetch balance';
@@ -1369,7 +1397,20 @@ app.get("/", (c) => {
             
             if (data.success) {
               balanceAmount.textContent = \`\${data.totalPayx.toLocaleString()} PAYX\`;
-              balanceDetails.textContent = \`Wallet: \${walletAddress.substring(0, 6)}...\${walletAddress.substring(38)} | Payments: \${data.payments.length}\`;
+              balanceDetails.innerHTML = \`
+                <div style="color: #2ecc71; font-size: 12px; margin-bottom: 5px;">
+                  💰 Total: \${data.totalPayx.toLocaleString()} PAYX
+                </div>
+                <div style="color: #4d94ff; font-size: 10px;">
+                  💵 USDC Paid: \${data.totalUsdc.toFixed(2)} USDC
+                </div>
+                <div style="color: #4d94ff; font-size: 10px;">
+                  📊 Payments: \${data.paymentCount} transactions
+                </div>
+                <div style="color: #4d94ff; font-size: 10px;">
+                  🏠 Wallet: \${walletAddress.substring(0, 6)}...\${walletAddress.substring(38)}
+                </div>
+              \`;
             } else {
               balanceAmount.textContent = 'Error loading balance';
               balanceDetails.textContent = data.error || 'Failed to fetch balance';
