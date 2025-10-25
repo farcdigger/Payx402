@@ -25,32 +25,25 @@ app.use(
   paymentMiddleware(
     payTo,
     {
-      "GET /payment/1usdc": {
-        price: "$1",
-        network: network,
-        config: {
-          description: "Pay 1 USDC → Get 5,000 PAYX tokens",
-        }
-      },
       "GET /payment/5usdc": {
         price: "$5",
         network: network,
         config: {
-          description: "Pay 5 USDC → Get 25,000 PAYX tokens",
+          description: "Pay 5 USDC → Get 100,000 PAYX tokens",
         }
       },
       "GET /payment/10usdc": {
         price: "$10",
         network: network,
         config: {
-          description: "Pay 10 USDC → Get 50,000 PAYX tokens",
+          description: "Pay 10 USDC → Get 200,000 PAYX tokens",
         }
       },
       "GET /payment/100usdc": {
         price: "$100",
         network: network,
         config: {
-          description: "Pay 100 USDC → Get 500,000 PAYX tokens",
+          description: "Pay 100 USDC → Get 2,000,000 PAYX tokens",
         }
       }
     },
@@ -226,23 +219,21 @@ app.get("/", (c) => {
         <h1>PAYx402</h1>
         <p class="subtitle">Buy PAYX Tokens with USDC</p>
         
-        <a href="/payment/1usdc">1 USDC → 5,000 PAYX</a>
-        <a href="/payment/5usdc">5 USDC → 25,000 PAYX</a>
-        <a href="/payment/10usdc">10 USDC → 50,000 PAYX</a>
-        <a href="/payment/100usdc">100 USDC → 500,000 PAYX</a>
+        <a href="/payment/5usdc">5 USDC → 100,000 PAYX</a>
+        <a href="/payment/10usdc">10 USDC → 200,000 PAYX</a>
+        <a href="/payment/100usdc">100 USDC → 2,000,000 PAYX</a>
         
         <div class="info">
           <p><strong>Token Information:</strong></p>
           <p>• Token: PAYX</p>
           <p>• Total Supply: 1,000,000,000 PAYX</p>
-          <p>• Rate: 1 USDC = 5,000 PAYX</p>
+          <p>• Rate: 1 USDC = 20,000 PAYX</p>
           <p>• Network: Base Mainnet</p>
           
           <p style="margin-top: 15px;"><strong>Payment Options:</strong></p>
-          <p>• 1 USDC = 5,000 PAYX</p>
-          <p>• 5 USDC = 25,000 PAYX</p>
-          <p>• 10 USDC = 50,000 PAYX</p>
-          <p>• 100 USDC = 500,000 PAYX</p>
+          <p>• 5 USDC = 100,000 PAYX</p>
+          <p>• 10 USDC = 200,000 PAYX</p>
+          <p>• 100 USDC = 2,000,000 PAYX</p>
           
           <p style="margin-top: 15px;"><strong>How it works:</strong></p>
           <p>1. Choose your payment amount</p>

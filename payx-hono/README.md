@@ -8,7 +8,7 @@ PAYX token satışı için x402 protokolü ile USDC ödemeleri alan payment gate
 
 - **Token Name**: PAYX
 - **Total Supply**: 1,000,000,000 PAYX
-- **Rate**: 1 USDC = 5,000 PAYX
+- **Rate**: 1 USDC = 20,000 PAYX
 - **Network**: Base Mainnet
 - **Distribution**: Otomatik (Smart Contract)
 
@@ -50,14 +50,14 @@ http://localhost:3000
 2. "Buy PAYX Tokens" butonuna tıkla
 3. **x402 otomatik paywall açılır!** ✅
 4. "Connect wallet" → MetaMask bağla
-5. "Pay Now" → 1 USDC öde
-6. 5,000 PAYX token al (otomatik dağıtım)
+5. "Pay Now" → USDC öde
+6. PAYX token al (otomatik dağıtım)
 
 ## x402 Otomatik Paywall
 
 x402 middleware otomatik olarak şu UI'ı oluşturur:
 - ✅ Payment Required ekranı
-- ✅ "Pay 1 USDC → Get 5,000 PAYX tokens"
+- ✅ "Pay USDC → Get PAYX tokens"
 - ✅ Wallet connection
 - ✅ Pay Now butonu
 - ✅ Transaction status
@@ -70,9 +70,9 @@ x402 middleware otomatik olarak şu UI'ı oluşturur:
 1. User clicks "Buy PAYX Tokens"
 2. x402 paywall appears: "To access this content, please pay $1 Base USDC"
 3. User connects wallet (MetaMask)
-4. User pays 1 USDC on Base Mainnet
+4. User pays USDC on Base Mainnet
 5. x402 verifies payment
-6. Server confirms: "Payment received! You will receive 5,000 PAYX tokens"
+6. Server confirms: "Payment received! You will receive PAYX tokens"
 7. Tokens distributed automatically via smart contract
 
 ## Environment Variables

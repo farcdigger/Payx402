@@ -37,20 +37,12 @@ app.use(
           description: "🧪 TEST: Pay 0.01 USDC → Get 50 PAYX tokens. Tokens will be sent to your wallet later.",
         }
       },
-      "GET /payment/1usdc": {
-        price: "$1",
-        network: network,
-        rpcUrl: rpcUrl,
-        config: {
-          description: "💰 Pay 1 USDC → Get 5,000 PAYX tokens. Tokens will be sent to your wallet later.",
-        }
-      },
       "GET /payment/5usdc": {
         price: "$5",
         network: network,
         rpcUrl: rpcUrl,
         config: {
-          description: "💎 Pay 5 USDC → Get 25,000 PAYX tokens. Tokens will be sent to your wallet later.",
+          description: "💎 Pay 5 USDC → Get 100,000 PAYX tokens. Tokens will be sent to your wallet later.",
         }
       },
       "GET /payment/10usdc": {
@@ -58,7 +50,7 @@ app.use(
         network: network,
         rpcUrl: rpcUrl,
         config: {
-          description: "🚀 Pay 10 USDC → Get 50,000 PAYX tokens. Tokens will be sent to your wallet later.",
+          description: "🚀 Pay 10 USDC → Get 200,000 PAYX tokens. Tokens will be sent to your wallet later.",
         }
       },
       "GET /payment/100usdc": {
@@ -66,7 +58,7 @@ app.use(
         network: network,
         rpcUrl: rpcUrl,
         config: {
-          description: "🌟 Pay 100 USDC → Get 500,000 PAYX tokens (Best Value!). Tokens will be sent to your wallet later.",
+          description: "🌟 Pay 100 USDC → Get 2,000,000 PAYX tokens (Best Value!). Tokens will be sent to your wallet later.",
         }
       }
     },
@@ -87,17 +79,6 @@ app.get("/payment/test", (c) => {
   });
 });
 
-app.get("/payment/1usdc", (c) => {
-  return c.json({
-    success: true,
-    message: "Payment confirmed! Your PAYX tokens will be sent to your wallet soon.",
-    payment: {
-      amount: "1 USDC",
-      tokens: "5,000 PAYX",
-      status: "Payment recorded - Tokens will be distributed later"
-    }
-  });
-});
 
 app.get("/payment/5usdc", (c) => {
   return c.json({
@@ -105,7 +86,7 @@ app.get("/payment/5usdc", (c) => {
     message: "Payment confirmed! Your PAYX tokens will be sent to your wallet soon.",
     payment: {
       amount: "5 USDC",
-      tokens: "25,000 PAYX",
+      tokens: "100,000 PAYX",
       status: "Payment recorded - Tokens will be distributed later"
     }
   });
@@ -117,7 +98,7 @@ app.get("/payment/10usdc", (c) => {
     message: "Payment confirmed! Your PAYX tokens will be sent to your wallet soon.",
     payment: {
       amount: "10 USDC",
-      tokens: "50,000 PAYX",
+      tokens: "200,000 PAYX",
       status: "Payment recorded - Tokens will be distributed later"
     }
   });
@@ -129,7 +110,7 @@ app.get("/payment/100usdc", (c) => {
     message: "Payment confirmed! Your PAYX tokens will be sent to your wallet soon.",
     payment: {
       amount: "100 USDC",
-      tokens: "500,000 PAYX",
+      tokens: "2,000,000 PAYX",
       status: "Payment recorded - Tokens will be distributed later"
     }
   });
