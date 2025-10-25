@@ -398,9 +398,22 @@ app.get("/blockchain-transactions", async (c) => {
     console.log('📡 BaseScan URL:', baseScanUrl);
     
     const response = await fetch(baseScanUrl);
+    
+    if (!response.ok) {
+      console.log('❌ API Request failed:', response.status, response.statusText);
+      return c.json({
+        success: false,
+        error: `API request failed: ${response.status} ${response.statusText}`,
+        url: baseScanUrl
+      });
+    }
+    
     const data = await response.json();
     
+    console.log('📊 API Response Status:', response.status);
+    console.log('📊 API Response Headers:', response.headers);
     console.log('📊 BaseScan response:', JSON.stringify(data, null, 2));
+    console.log('📊 API URL:', baseScanUrl);
     
     if (data.status === '1' && data.result) {
       // Filter for USDC transactions (incoming only, excluding 0.01 USDC test payments)
@@ -456,10 +469,22 @@ app.post("/sync-blockchain", async (c) => {
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     const response = await fetch(baseScanUrl);
+    
+    if (!response.ok) {
+      console.log('❌ API Request failed:', response.status, response.statusText);
+      return c.json({
+        success: false,
+        error: `API request failed: ${response.status} ${response.statusText}`,
+        url: baseScanUrl
+      });
+    }
+    
     const data = await response.json();
     
     console.log('📊 API Response Status:', response.status);
+    console.log('📊 API Response Headers:', response.headers);
     console.log('📊 API Response Data:', JSON.stringify(data, null, 2));
+    console.log('📊 API URL:', baseScanUrl);
     
     if (data.status === '1' && data.result) {
       // Filter for USDC transactions TO our wallet (incoming payments only)
@@ -776,9 +801,22 @@ app.get("/test-blockchain", async (c) => {
     console.log('📡 Testing URL:', baseScanUrl);
     
     const response = await fetch(baseScanUrl);
+    
+    if (!response.ok) {
+      console.log('❌ API Request failed:', response.status, response.statusText);
+      return c.json({
+        success: false,
+        error: `API request failed: ${response.status} ${response.statusText}`,
+        url: baseScanUrl
+      });
+    }
+    
     const data = await response.json();
     
+    console.log('📊 API Response Status:', response.status);
+    console.log('📊 API Response Headers:', response.headers);
     console.log('📊 API Response:', JSON.stringify(data, null, 2));
+    console.log('📊 API URL:', baseScanUrl);
     
     if (data.status === '1' && data.result) {
       const usdcTransactions = data.result.filter(tx => {
