@@ -1390,25 +1390,23 @@ app.get("/", (c) => {
         function startBlockchainMonitoring() {
                  console.log('🔍 Starting blockchain monitoring...');
                  
-                 // Monitor for 10 minutes
+                 // Monitor for 15 minutes
                  let monitoringAttempts = 0;
-                 const maxAttempts = 300; // 10 minutes
+                 const maxAttempts = 5; // 5 attempts (5 * 3 minutes = 15 minutes)
                  
                  const checkInterval = setInterval(() => {
                    monitoringAttempts++;
                    console.log('📊 Blockchain monitoring attempt:', monitoringAttempts);
                    
-                   // Sync blockchain transactions every 5 seconds
-                   if (monitoringAttempts % 3 === 0) {
-                     syncBlockchainTransactions();
-                   }
+                   // Sync blockchain transactions every 3 minutes
+                   syncBlockchainTransactions();
                    
                    // Stop monitoring after max attempts
                    if (monitoringAttempts >= maxAttempts) {
                      console.log('⏰ Blockchain monitoring timeout reached');
                      clearInterval(checkInterval);
                    }
-                 }, 2000);
+                 }, 180000); // 3 minutes = 180,000 milliseconds
                }
         
         // Sync blockchain transactions
