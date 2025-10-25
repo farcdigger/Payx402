@@ -5,7 +5,9 @@
   "dependencies": {
     "@coinbase/x402": "^0.6.6",
     "@hono/node-server": "^1.19.5",
+    "@supabase/supabase-js": "^2.45.4",
     "dotenv": "^17.2.3",
+    "ethers": "^6.13.2",
     "hono": "^4.10.3",
     "x402-hono": "^0.6.5"
   }

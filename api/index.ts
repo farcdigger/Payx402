@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import paymentTracker from './payment-tracker';
+import dashboard from './dashboard';
 
 // Vercel optimization
 const isVercel = process.env.VERCEL === '1';
@@ -115,6 +117,10 @@ app.get("/payment/100usdc", (c) => {
     }
   });
 });
+
+// Mount payment tracking and dashboard routes
+app.route('/api', paymentTracker);
+app.route('/dashboard', dashboard);
 
 // Simple info page with links to protected endpoints
 app.get("/", (c) => {
