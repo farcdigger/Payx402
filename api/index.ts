@@ -735,12 +735,12 @@ app.get("/", (c) => {
           const walletAddress = walletInput.value.trim();
           
           if (!walletAddress) {
-            alert('Please enter your wallet address');
+            alert('⚠️ WARNING: You must enter your wallet address to receive PAYX tokens!');
             return;
           }
           
           if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
-            alert('Please enter a valid wallet address (0x...)');
+            alert('❌ ERROR: Please enter a valid wallet address (0x... format, 42 characters)');
             return;
           }
           
@@ -753,6 +753,9 @@ app.get("/", (c) => {
           
           // Load payment with wallet address
           iframe.src = \`\${currentPaymentUrl}?wallet=\${encodeURIComponent(walletAddress)}\`;
+          
+          // Start monitoring for payment success
+          setTimeout(() => startPaymentMonitoring(), 1000);
         }
           
           // Start monitoring for payment success
