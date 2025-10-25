@@ -80,7 +80,31 @@ app.get("/payment/test", (c) => {
 });
 
 
-app.get("/payment/5usdc", (c) => {
+app.get("/payment/5usdc", async (c) => {
+  // Simple payment tracking without Supabase dependency
+  const walletAddress = c.req.query('wallet');
+  if (walletAddress && process.env.SUPABASE_URL) {
+    try {
+      const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'apikey': process.env.SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          wallet_address: walletAddress,
+          amount_usdc: 5,
+          amount_payx: 100000,
+          created_at: new Date().toISOString()
+        })
+      });
+      if (response.ok) console.log('Payment tracked');
+    } catch (error) {
+      console.error('Tracking failed:', error);
+    }
+  }
+
   return c.json({
     success: true,
     message: "Payment confirmed! Your PAYX tokens will be sent to your wallet soon.",
@@ -92,7 +116,29 @@ app.get("/payment/5usdc", (c) => {
   });
 });
 
-app.get("/payment/10usdc", (c) => {
+app.get("/payment/10usdc", async (c) => {
+  const walletAddress = c.req.query('wallet');
+  if (walletAddress && process.env.SUPABASE_URL) {
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'apikey': process.env.SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          wallet_address: walletAddress,
+          amount_usdc: 10,
+          amount_payx: 200000,
+          created_at: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.error('Tracking failed:', error);
+    }
+  }
+
   return c.json({
     success: true,
     message: "Payment confirmed! Your PAYX tokens will be sent to your wallet soon.",
@@ -104,7 +150,29 @@ app.get("/payment/10usdc", (c) => {
   });
 });
 
-app.get("/payment/100usdc", (c) => {
+app.get("/payment/100usdc", async (c) => {
+  const walletAddress = c.req.query('wallet');
+  if (walletAddress && process.env.SUPABASE_URL) {
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'apikey': process.env.SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          wallet_address: walletAddress,
+          amount_usdc: 100,
+          amount_payx: 2000000,
+          created_at: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.error('Tracking failed:', error);
+    }
+  }
+
   return c.json({
     success: true,
     message: "Payment confirmed! Your PAYX tokens will be sent to your wallet soon.",
@@ -114,6 +182,40 @@ app.get("/payment/100usdc", (c) => {
       status: "Payment recorded - Tokens will be distributed later"
     }
   });
+});
+
+// Balance endpoint - simple fetch to Supabase
+app.get("/balance/:walletAddress", async (c) => {
+  const walletAddress = c.req.param('walletAddress');
+  
+  if (!process.env.SUPABASE_URL) {
+    return c.json({ success: false, error: 'Supabase not configured' });
+  }
+
+  try {
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments?wallet_address=eq.${walletAddress}&order=created_at.desc`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'apikey': process.env.SUPABASE_ANON_KEY
+      }
+    });
+
+    if (response.ok) {
+      const payments = await response.json();
+      const totalPayx = payments.reduce((sum, p) => sum + p.amount_payx, 0);
+      
+      return c.json({
+        success: true,
+        walletAddress,
+        totalPayx,
+        payments
+      });
+    }
+  } catch (error) {
+    console.error('Balance fetch error:', error);
+  }
+
+  return c.json({ success: false, error: 'Failed to fetch balance' });
 });
 
 // Simple info page with links to protected endpoints
