@@ -694,6 +694,7 @@ app.get("/", (c) => {
         let currentPaymentTitle = '';
         let currentPaymentType = '';
         
+        // Define openPaymentModal function
         function openPaymentModal(url, title, type) {
           const modal = document.getElementById('paymentModal');
           const modalContent = document.getElementById('modalContent');
@@ -790,10 +791,121 @@ app.get("/", (c) => {
           const overlay = document.getElementById('successOverlay');
           overlay.style.display = 'none';
         }
+        
+        // Close payment modal function
+        function closePaymentModal() {
+          const modal = document.getElementById('paymentModal');
+          const iframe = document.getElementById('paymentIframe');
           
-          // Start monitoring for payment success
-          setTimeout(() => startPaymentMonitoring(), 1000);
+          // Stop monitoring
+          if (checkInterval) {
+            clearInterval(checkInterval);
+          }
+          
+          // Hide modal
+          modal.classList.remove('active');
+          
+          // Clear iframe
+          iframe.src = 'about:blank';
+          
+          // Restore body scroll
+          document.body.style.overflow = '';
         }
+        
+        // Balance check function
+        async function checkBalance() {
+          const walletInput = document.getElementById('walletInput');
+          const balanceResult = document.getElementById('balanceResult');
+          const balanceAmount = document.getElementById('balanceAmount');
+          const balanceDetails = document.getElementById('balanceDetails');
+          
+          const walletAddress = walletInput.value.trim();
+          
+          if (!walletAddress) {
+            alert('Please enter a wallet address');
+            return;
+          }
+          
+          if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+            alert('Please enter a valid wallet address (0x...)');
+            return;
+          }
+          
+          try {
+            balanceResult.style.display = 'block';
+            balanceAmount.textContent = 'Loading...';
+            balanceDetails.textContent = 'Fetching balance...';
+            
+            const response = await fetch(\`/balance/\${walletAddress}\`);
+            const data = await response.json();
+            
+            if (data.success) {
+              balanceAmount.textContent = \`\${data.totalPayx.toLocaleString()} PAYX\`;
+              balanceDetails.textContent = \`Wallet: \${walletAddress.substring(0, 6)}...\${walletAddress.substring(38)} | Payments: \${data.payments.length}\`;
+            } else {
+              balanceAmount.textContent = 'Error loading balance';
+              balanceDetails.textContent = data.error || 'Failed to fetch balance';
+            }
+          } catch (error) {
+            balanceAmount.textContent = 'Error';
+            balanceDetails.textContent = 'Failed to connect to server';
+            console.error('Balance check error:', error);
+          }
+        }
+        
+        // Coin rain animation
+        function createCoinRain(duration = 5000) {
+          const coinRain = document.getElementById('coinRain');
+          const coins = ['💰', '🪙', '💎', '⭐', '✨'];
+          const coinsToCreate = 50; // Number of coins
+          
+          for (let i = 0; i < coinsToCreate; i++) {
+            setTimeout(() => {
+              const coin = document.createElement('div');
+              coin.className = 'coin';
+              coin.textContent = coins[Math.floor(Math.random() * coins.length)];
+              coin.style.left = Math.random() * 100 + '%';
+              coin.style.animationDuration = (Math.random() * 2 + 2) + 's';
+              coin.style.animationDelay = (Math.random() * 0.5) + 's';
+              
+              coinRain.appendChild(coin);
+              
+              // Remove coin after animation
+              coin.addEventListener('animationend', () => {
+                coin.remove();
+              });
+            }, i * 50); // Stagger creation
+          }
+          
+          // Stop after duration
+          setTimeout(() => {
+            coinRain.innerHTML = ''; // Clear all coins
+          }, duration);
+        }
+        
+        // Close modal on overlay click
+        document.getElementById('paymentModal').addEventListener('click', function(e) {
+          if (e.target === this) {
+            closePaymentModal();
+          }
+        });
+        
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            closePaymentModal();
+          }
+        });
+        
+        // Initial check for wallet in URL (if user navigates directly)
+        document.addEventListener('DOMContentLoaded', () => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const wallet = urlParams.get('wallet');
+          if (wallet) {
+            document.getElementById('walletInput').value = wallet;
+            checkBalance();
+          }
+        });
         
         function closePaymentModal() {
           const modal = document.getElementById('paymentModal');
