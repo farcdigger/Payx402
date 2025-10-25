@@ -591,6 +591,19 @@ app.get("/", (c) => {
         <h1>PAYx402</h1>
         <p class="subtitle">Buy PAYX Tokens with USDC</p>
         
+        <!-- Balance Display -->
+        <div class="balance-section">
+          <h3 style="color: #2ecc71; margin-bottom: 15px;">💰 Your PAYX Balance</h3>
+          <div class="balance-input">
+            <input type="text" id="walletInput" placeholder="Enter your wallet address (0x...)" style="width: 100%; padding: 10px; margin-bottom: 10px; font-family: 'Press Start 2P', monospace; font-size: 10px; background: #000814; color: #0052FF; border: 2px solid #0052FF;">
+            <button onclick="checkBalance()" style="background: #2ecc71; border: 3px solid #000; color: #000; padding: 10px 20px; font-size: 10px; cursor: pointer; box-shadow: 3px 3px 0px #000; transition: all 0.1s;">Check Balance</button>
+          </div>
+          <div id="balanceResult" style="margin-top: 15px; padding: 15px; background: #000814; border: 2px solid #2ecc71; display: none;">
+            <div id="balanceAmount" style="font-size: 18px; color: #2ecc71; font-weight: bold;"></div>
+            <div id="balanceDetails" style="font-size: 10px; color: #4d94ff; margin-top: 10px;"></div>
+          </div>
+        </div>
+        
         <a href="#" onclick="openPaymentModal('/payment/5usdc', '💎 5 USDC Payment'); return false;">5 USDC → 100,000 PAYX</a>
         <a href="#" onclick="openPaymentModal('/payment/10usdc', '🚀 10 USDC Payment'); return false;">10 USDC → 200,000 PAYX</a>
         <a href="#" onclick="openPaymentModal('/payment/100usdc', '🌟 100 USDC Payment', 'premium'); return false;">100 USDC → 2,000,000 PAYX</a>
@@ -729,6 +742,47 @@ app.get("/", (c) => {
             closePaymentModal();
           }
         });
+        
+        // Balance Check Function
+        async function checkBalance() {
+          const walletInput = document.getElementById('walletInput');
+          const balanceResult = document.getElementById('balanceResult');
+          const balanceAmount = document.getElementById('balanceAmount');
+          const balanceDetails = document.getElementById('balanceDetails');
+          
+          const walletAddress = walletInput.value.trim();
+          
+          if (!walletAddress) {
+            alert('Please enter a wallet address');
+            return;
+          }
+          
+          if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+            alert('Please enter a valid wallet address (0x...)');
+            return;
+          }
+          
+          try {
+            balanceResult.style.display = 'block';
+            balanceAmount.textContent = 'Loading...';
+            balanceDetails.textContent = 'Fetching balance...';
+            
+            const response = await fetch(\`/balance/\${walletAddress}\`);
+            const data = await response.json();
+            
+            if (data.success) {
+              balanceAmount.textContent = \`\${data.totalPayx.toLocaleString()} PAYX\`;
+              balanceDetails.textContent = \`Wallet: \${walletAddress.substring(0, 6)}...\${walletAddress.substring(38)} | Payments: \${data.payments.length}\`;
+            } else {
+              balanceAmount.textContent = 'Error loading balance';
+              balanceDetails.textContent = data.error || 'Failed to fetch balance';
+            }
+          } catch (error) {
+            balanceAmount.textContent = 'Error';
+            balanceDetails.textContent = 'Failed to connect to server';
+            console.error('Balance check error:', error);
+          }
+        }
         
         // Coin Rain Animation
         function createCoinRain(duration = 5000) {
