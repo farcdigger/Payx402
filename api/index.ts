@@ -448,10 +448,9 @@ app.get("/", (c) => {
         <h1>PAYx402</h1>
         <p class="subtitle">Buy PAYX Tokens with USDC</p>
         
-        <a href="#" onclick="openPaymentModal('/payment/1usdc', '💰 1 USDC Payment'); return false;">1 USDC → 5,000 PAYX</a>
-        <a href="#" onclick="openPaymentModal('/payment/5usdc', '💎 5 USDC Payment'); return false;">5 USDC → 25,000 PAYX</a>
-        <a href="#" onclick="openPaymentModal('/payment/10usdc', '🚀 10 USDC Payment'); return false;">10 USDC → 50,000 PAYX</a>
-        <a href="#" onclick="openPaymentModal('/payment/100usdc', '🌟 100 USDC Payment', 'premium'); return false;">100 USDC → 500,000 PAYX</a>
+        <a href="#" onclick="openPaymentModal('/payment/5usdc', '💎 5 USDC Payment'); return false;">5 USDC → 100,000 PAYX</a>
+        <a href="#" onclick="openPaymentModal('/payment/10usdc', '🚀 10 USDC Payment'); return false;">10 USDC → 200,000 PAYX</a>
+        <a href="#" onclick="openPaymentModal('/payment/100usdc', '🌟 100 USDC Payment', 'premium'); return false;">100 USDC → 2,000,000 PAYX</a>
         
         <a href="#" onclick="openPaymentModal('/payment/test', '🧪 Test Payment', 'test'); return false;" class="test-button">0.01 USDC → 50 PAYX</a>
         
@@ -459,15 +458,14 @@ app.get("/", (c) => {
           <p><strong>Token Information:</strong></p>
           <p>• Token: PAYX</p>
           <p>• Total Supply: 1,000,000,000 PAYX</p>
-          <p>• Rate: 1 USDC = 5,000 PAYX</p>
+          <p>• Rate: 1 USDC = 20,000 PAYX</p>
           <p>• Network: Base Mainnet</p>
           
           <p style="margin-top: 15px;"><strong>Payment Options:</strong></p>
           <p>• 0.01 USDC = 50 PAYX (Test)</p>
-          <p>• 1 USDC = 5,000 PAYX</p>
-          <p>• 5 USDC = 25,000 PAYX</p>
-          <p>• 10 USDC = 50,000 PAYX</p>
-          <p>• 100 USDC = 500,000 PAYX</p>
+          <p>• 5 USDC = 100,000 PAYX</p>
+          <p>• 10 USDC = 200,000 PAYX</p>
+          <p>• 100 USDC = 2,000,000 PAYX</p>
           
           <p style="margin-top: 15px;"><strong>How it works:</strong></p>
           <p>1. Choose your payment amount</p>
