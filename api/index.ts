@@ -659,10 +659,13 @@ app.get("/", (c) => {
           <div class="modal-body">
             <!-- Wallet Address Input -->
             <div id="walletInputSection" style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
-              <h4 style="color: #2ecc71; margin-bottom: 10px; font-size: 12px;">💰 Enter Your Wallet Address</h4>
-              <input type="text" id="paymentWalletInput" placeholder="0x1234567890abcdef..." style="width: 100%; padding: 10px; margin-bottom: 10px; font-family: 'Press Start 2P', monospace; font-size: 10px; background: #001d3d; color: #0052FF; border: 2px solid #0052FF;">
-              <p style="font-size: 8px; color: #4d94ff; margin-bottom: 10px;">This will be used to track your PAYX tokens</p>
-              <button onclick="startPayment()" style="background: #2ecc71; border: 3px solid #000; color: #000; padding: 10px 20px; font-size: 10px; cursor: pointer; box-shadow: 3px 3px 0px #000;">Start Payment</button>
+              <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 REQUIRED: Enter Your Wallet Address</h4>
+              <p style="font-size: 10px; color: #ff4d4d; margin-bottom: 15px; text-align: center; background: #001d3d; padding: 10px; border: 2px solid #ff4d4d;">
+                <strong>⚠️ WARNING:</strong> You must enter your wallet address to receive PAYX tokens!
+              </p>
+              <input type="text" id="paymentWalletInput" placeholder="0x1234567890abcdef..." style="width: 100%; padding: 15px; margin-bottom: 15px; font-family: 'Press Start 2P', monospace; font-size: 12px; background: #001d3d; color: #0052FF; border: 3px solid #2ecc71; text-align: center;">
+              <p style="font-size: 9px; color: #4d94ff; margin-bottom: 15px; text-align: center;">This address will receive your PAYX tokens after payment</p>
+              <button onclick="startPayment()" style="background: #2ecc71; border: 4px solid #000; color: #000; padding: 15px 30px; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0px #000; width: 100%; font-weight: bold;">🚀 START PAYMENT</button>
             </div>
             <iframe id="paymentIframe" class="modal-iframe" src="about:blank" style="display: none;"></iframe>
           </div>
@@ -718,8 +721,7 @@ app.get("/", (c) => {
           walletInputSection.style.display = 'block';
           iframe.style.display = 'none';
           
-          // Load payment iframe
-          iframe.src = url;
+          // Don't load iframe yet - wait for wallet input
           
           // Show modal
           modal.classList.add('active');
