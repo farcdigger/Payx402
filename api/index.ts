@@ -734,21 +734,16 @@ app.get("/", (c) => {
           <div class="modal-body">
                    <!-- Wallet Address Input -->
                    <div id="walletInputSection" style="padding: 20px; background: #000814; border-bottom: 2px solid #0052FF;">
-                     <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 REQUIRED: Connect Your Wallet</h4>
+                     <h4 style="color: #2ecc71; margin-bottom: 15px; font-size: 14px; text-align: center;">💰 OPTIONAL: Enter Your Wallet Address</h4>
                      <p style="font-size: 10px; color: #4d94ff; margin-bottom: 15px; text-align: center; background: #001d3d; padding: 10px; border: 2px solid #4d94ff;">
-                       <strong>💡 TIP:</strong> Connect your wallet automatically or enter address manually
+                       <strong>💡 TIP:</strong> Enter your wallet address to receive PAYX tokens. This is optional but recommended for tracking.
                      </p>
                      
-                     <!-- Connect Wallet Button -->
-                     <button onclick="connectWallet()" id="connectWalletBtn" style="background: #0052FF; border: 3px solid #000; color: #fff; padding: 12px 20px; font-size: 11px; cursor: pointer; box-shadow: 3px 3px 0px #000; width: 100%; margin-bottom: 15px; font-weight: bold;">🔗 CONNECT WALLET</button>
-                     
                      <!-- Manual Input -->
-                     <div id="manualInputSection" style="display: none;">
-                       <input type="text" id="paymentWalletInput" placeholder="Enter wallet address manually (0x...)" style="width: 100%; padding: 15px; margin-bottom: 15px; font-family: 'Press Start 2P', monospace; font-size: 12px; background: #001d3d; color: #0052FF; border: 3px solid #ff4d4d; text-align: center;">
-                       <p style="font-size: 9px; color: #4d94ff; margin-bottom: 15px; text-align: center;">This address will receive your PAYX tokens after payment</p>
-                     </div>
+                     <input type="text" id="paymentWalletInput" placeholder="Enter wallet address (0x...) - Optional but recommended" style="width: 100%; padding: 15px; margin-bottom: 15px; font-family: 'Press Start 2P', monospace; font-size: 12px; background: #001d3d; color: #0052FF; border: 3px solid #4d94ff; text-align: center;">
+                     <p style="font-size: 9px; color: #4d94ff; margin-bottom: 15px; text-align: center;">This address will receive your PAYX tokens after payment</p>
                      
-                     <button onclick="startPayment()" id="startPaymentBtn" style="background: #2ecc71; border: 4px solid #000; color: #000; padding: 15px 30px; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0px #000; width: 100%; font-weight: bold; display: none;">🚀 START PAYMENT</button>
+                     <button onclick="startPayment()" id="startPaymentBtn" style="background: #2ecc71; border: 4px solid #000; color: #000; padding: 15px 30px; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0px #000; width: 100%; font-weight: bold;">🚀 START PAYMENT</button>
                    </div>
             <iframe id="paymentIframe" class="modal-iframe" src="about:blank" style="display: none;"></iframe>
           </div>
@@ -801,12 +796,14 @@ app.get("/", (c) => {
             modalContent.classList.add('premium');
           }
           
-          // Hide wallet input, show iframe directly
-          walletInputSection.style.display = 'none';
+          // Show both wallet input and iframe
+          walletInputSection.style.display = 'block';
           iframe.style.display = 'block';
           
           // Load payment directly - x402 will handle wallet connection
-          iframe.src = url;
+          // Add a random parameter to track this payment session
+          const sessionId = Date.now();
+          iframe.src = url + '?session=' + sessionId;
           
           // Start monitoring for payment success and wallet address
           setTimeout(() => startPaymentMonitoring(), 1000);
@@ -989,26 +986,30 @@ app.get("/", (c) => {
         function startPayment() {
           const walletInput = document.getElementById('paymentWalletInput');
           const walletAddress = walletInput.value.trim();
-          
-          if (!walletAddress) {
-            alert('⚠️ WARNING: You must enter your wallet address to receive PAYX tokens!');
-            return;
-          }
-          
-          if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
-            alert('❌ ERROR: Please enter a valid wallet address (0x... format, 42 characters)');
-            return;
-          }
-          
-          // Hide wallet input, show iframe
           const walletInputSection = document.getElementById('walletInputSection');
           const iframe = document.getElementById('paymentIframe');
           
+          // If wallet address provided, validate it
+          if (walletAddress) {
+            if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+              alert('❌ ERROR: Please enter a valid wallet address (0x... format, 42 characters)');
+              return;
+            }
+            
+            // Send wallet address to backend for tracking
+            sendWalletToBackend(walletAddress);
+          }
+          
+          // Hide wallet input, show iframe
           walletInputSection.style.display = 'none';
           iframe.style.display = 'block';
           
-          // Load payment with wallet address
-          iframe.src = \`\${currentPaymentUrl}?wallet=\${encodeURIComponent(walletAddress)}\`;
+          // Load payment with wallet address (if provided)
+          const paymentUrl = walletAddress ? 
+            \`\${currentPaymentUrl}?wallet=\${encodeURIComponent(walletAddress)}\` : 
+            currentPaymentUrl;
+          
+          iframe.src = paymentUrl;
           
           // Start monitoring for payment success
           setTimeout(() => startPaymentMonitoring(), 1000);
@@ -1019,19 +1020,28 @@ app.get("/", (c) => {
           const iframe = document.getElementById('paymentIframe');
           let checkInterval;
           let walletAddress = null;
+          let monitoringAttempts = 0;
+          const maxAttempts = 30; // Monitor for 60 seconds
+          
+          console.log('Starting payment monitoring...');
           
           checkInterval = setInterval(() => {
+            monitoringAttempts++;
+            console.log('Monitoring attempt:', monitoringAttempts);
+            
             try {
+              // Try to access iframe content
               const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
               if (iframeDoc && iframeDoc.body) {
                 const bodyText = iframeDoc.body.textContent || iframeDoc.body.innerText;
+                console.log('Iframe content detected:', bodyText.substring(0, 200));
                 
                 // Try to extract wallet address from x402 payment interface
                 if (bodyText.includes('0x') && bodyText.length > 40) {
                   const addressMatch = bodyText.match(/0x[a-fA-F0-9]{40}/);
                   if (addressMatch && !walletAddress) {
                     walletAddress = addressMatch[0];
-                    console.log('Wallet address detected:', walletAddress);
+                    console.log('✅ Wallet address detected:', walletAddress);
                     
                     // Send wallet address to backend for tracking
                     sendWalletToBackend(walletAddress);
@@ -1039,20 +1049,46 @@ app.get("/", (c) => {
                 }
                 
                 // Check for payment success
-                if (bodyText.includes('success') || bodyText.includes('confirmed') || bodyText.includes('complete') || bodyText.includes('Payment successful')) {
+                if (bodyText.includes('success') || bodyText.includes('confirmed') || bodyText.includes('complete') || bodyText.includes('Payment successful') || bodyText.includes('Transaction successful')) {
+                  console.log('✅ Payment success detected!');
                   clearInterval(checkInterval);
                   
                   // Send final payment confirmation with wallet address
                   if (walletAddress) {
                     sendPaymentConfirmation(walletAddress);
+                  } else {
+                    // If no wallet detected, try to extract it now
+                    const addressMatch = bodyText.match(/0x[a-fA-F0-9]{40}/);
+                    if (addressMatch) {
+                      walletAddress = addressMatch[0];
+                      console.log('✅ Wallet address detected on success:', walletAddress);
+                      sendPaymentConfirmation(walletAddress);
+                    }
                   }
                   
                   showSuccessOverlay();
                 }
+              } else {
+                console.log('Iframe not ready yet...');
               }
             } catch (e) {
               // Cross-origin error, continue monitoring
-              console.log('Monitoring iframe...');
+              console.log('Cross-origin error, continuing monitoring...');
+            }
+            
+            // Stop monitoring after max attempts
+            if (monitoringAttempts >= maxAttempts) {
+              console.log('Monitoring timeout reached');
+              clearInterval(checkInterval);
+              
+              // Try to get wallet address from URL parameters as fallback
+              const urlParams = new URLSearchParams(window.location.search);
+              const walletParam = urlParams.get('wallet');
+              if (walletParam && !walletAddress) {
+                walletAddress = walletParam;
+                console.log('✅ Wallet address from URL parameter:', walletAddress);
+                sendWalletToBackend(walletAddress);
+              }
             }
           }, 2000);
         }
@@ -1218,6 +1254,26 @@ app.get("/", (c) => {
         document.addEventListener('keydown', function(e) {
           if (e.key === 'Escape') {
             closePaymentModal();
+          }
+        });
+        
+        // Listen for messages from iframe (x402 payment)
+        window.addEventListener('message', function(event) {
+          console.log('Message received from iframe:', event.data);
+          
+          // Check if message contains wallet address
+          if (event.data && event.data.wallet) {
+            console.log('✅ Wallet address received via postMessage:', event.data.wallet);
+            sendWalletToBackend(event.data.wallet);
+          }
+          
+          // Check if message contains payment success
+          if (event.data && event.data.success) {
+            console.log('✅ Payment success received via postMessage');
+            if (event.data.wallet) {
+              sendPaymentConfirmation(event.data.wallet);
+            }
+            showSuccessOverlay();
           }
         });
         
