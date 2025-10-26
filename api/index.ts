@@ -937,64 +937,56 @@ app.post("/force-sync", async (c) => {
     
     const walletAddress = "0xda8d766bc482a7953b72283f56c12ce00da6a86a";
     
-    // Get ALL transactions with pagination
-    let allTransactions = [];
-    let page = 1;
-    const pageSize = 10000;
-    let hasMore = true;
+    // Get ALL transactions (single API call - like the working version)
+    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
-    while (hasMore && page <= 20) { // Limit to 20 pages max (200k transactions)
-      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=10000&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
-      
-      console.log(`📄 Force sync - Fetching page ${page}...`);
-      const response = await fetch(baseScanUrl);
-      
-      if (!response.ok) {
-        return c.json({
-          success: false,
-          error: `API request failed: ${response.status} ${response.statusText}`
-        });
-      }
-      
-      const data = await response.json();
-      
-      if (data.status === '1' && data.result && data.result.length > 0) {
-        allTransactions = allTransactions.concat(data.result);
-        console.log(`✅ Force sync - Page ${page} added. Total: ${allTransactions.length}`);
-        page++;
-        
-        if (data.result.length < pageSize) {
-          hasMore = false;
-        }
-      } else {
-        hasMore = false;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
+    console.log('📡 Force sync URL:', baseScanUrl);
+    
+    const response = await fetch(baseScanUrl);
+    
+    if (!response.ok) {
+      return c.json({
+        success: false,
+        error: `API request failed: ${response.status} ${response.statusText}`
+      });
     }
     
-    // Filter for USDC transactions
-    const usdcTransactions = allTransactions.filter(tx => {
-      const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
-      const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
-      const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase();
-      return isUsdc && isIncoming && isNotOutgoing;
-    });
+    const data = await response.json();
     
-    console.log('🎉 FORCE SYNC COMPLETE!');
-    console.log(`📊 Total transactions: ${allTransactions.length}`);
-    console.log(`📊 USDC transactions: ${usdcTransactions.length}`);
+    console.log('📊 Force sync - API Response Status:', response.status);
+    console.log('📊 Force sync - API Status:', data.status);
+    console.log('📊 Force sync - Total transactions:', data.result ? data.result.length : 0);
+    
+    if (data.status === '1' && data.result) {
+      // Filter for USDC transactions
+      const usdcTransactions = data.result.filter(tx => {
+        const isUsdc = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
+        const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase();
+        return isUsdc && isIncoming && isNotOutgoing;
+      });
+      
+      console.log('🎉 FORCE SYNC COMPLETE!');
+      console.log(`📊 Total transactions: ${data.result.length}`);
+      console.log(`📊 USDC transactions: ${usdcTransactions.length}`);
+      
+      return c.json({
+        success: true,
+        message: 'Force sync completed',
+        total_transactions: data.result.length,
+        usdc_transactions: usdcTransactions.length,
+        sample_transactions: usdcTransactions.slice(0, 10).map(tx => ({
+          from: tx.from,
+          amount: parseFloat(tx.value) / Math.pow(10, 6),
+          hash: tx.hash
+        }))
+      });
+    }
     
     return c.json({
-      success: true,
-      message: 'Force sync completed',
-      total_transactions: allTransactions.length,
-      usdc_transactions: usdcTransactions.length,
-      sample_transactions: usdcTransactions.slice(0, 10).map(tx => ({
-        from: tx.from,
-        amount: parseFloat(tx.value) / Math.pow(10, 6),
-        hash: tx.hash
-      }))
+      success: false,
+      error: 'No data received from API',
+      api_response: data
     });
     
   } catch (error) {
