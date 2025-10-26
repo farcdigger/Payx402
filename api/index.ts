@@ -450,32 +450,56 @@ app.get("/blockchain-transactions", async (c) => {
     
     // BaseScan API endpoint for token transactions with API key
     // Using Etherscan API with Base chain ID (8453)
-    // Get ALL transactions (comprehensive sync)
-    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    // Get ALL transactions with pagination (comprehensive sync)
+    let allTransactions = [];
+    let page = 1;
+    const pageSize = 10000; // Max per page
+    let hasMore = true;
     
-    console.log('📡 BaseScan URL:', baseScanUrl);
+    console.log('🔄 Starting comprehensive blockchain fetch with pagination...');
     
-    const response = await fetch(baseScanUrl);
-    
-    if (!response.ok) {
-      console.log('❌ API Request failed:', response.status, response.statusText);
-      return c.json({
-        success: false,
-        error: `API request failed: ${response.status} ${response.statusText}`,
-        url: baseScanUrl
-      });
+    while (hasMore) {
+      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+      
+      console.log(`📄 Fetching page ${page}...`);
+      const response = await fetch(baseScanUrl);
+      
+      if (!response.ok) {
+        console.log('❌ API Request failed:', response.status, response.statusText);
+        return c.json({
+          success: false,
+          error: `API request failed: ${response.status} ${response.statusText}`,
+          url: baseScanUrl
+        });
+      }
+      
+      const data = await response.json();
+      
+      console.log(`📊 Page ${page} - API Response Status:`, response.status);
+      console.log(`📊 Page ${page} - Transactions found:`, data.result ? data.result.length : 0);
+      
+      if (data.status === '1' && data.result && data.result.length > 0) {
+        allTransactions = allTransactions.concat(data.result);
+        console.log(`✅ Page ${page} added. Total transactions so far: ${allTransactions.length}`);
+        page++;
+        
+        // If we got less than pageSize, we've reached the end
+        if (data.result.length < pageSize) {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
+      
+      // Add small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
     
-    const data = await response.json();
+    console.log('🎉 Pagination complete! Total transactions fetched:', allTransactions.length);
     
-    console.log('📊 API Response Status:', response.status);
-    console.log('📊 API Response Headers:', response.headers);
-    console.log('📊 BaseScan response:', JSON.stringify(data, null, 2));
-    console.log('📊 API URL:', baseScanUrl);
-    
-    if (data.status === '1' && data.result) {
+    if (allTransactions.length > 0) {
       // Filter for USDC transactions (incoming only, excluding 0.01 USDC test payments)
-      const usdcTransactions = data.result.filter(tx => {
+      const usdcTransactions = allTransactions.filter(tx => {
         const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
@@ -522,30 +546,56 @@ app.post("/sync-blockchain", async (c) => {
     
     // Get transactions from BaseScan with API key
     // Using Etherscan API with Base chain ID (8453)
-    // Get ALL transactions (comprehensive sync)
-    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    // Get ALL transactions with pagination (comprehensive sync)
+    let allTransactions = [];
+    let page = 1;
+    const pageSize = 10000; // Max per page
+    let hasMore = true;
     
-    const response = await fetch(baseScanUrl);
+    console.log('🔄 Starting comprehensive blockchain sync with pagination...');
     
-    if (!response.ok) {
-      console.log('❌ API Request failed:', response.status, response.statusText);
-      return c.json({
-        success: false,
-        error: `API request failed: ${response.status} ${response.statusText}`,
-        url: baseScanUrl
-      });
+    while (hasMore) {
+      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+      
+      console.log(`📄 Fetching page ${page}...`);
+      const response = await fetch(baseScanUrl);
+    
+      if (!response.ok) {
+        console.log('❌ API Request failed:', response.status, response.statusText);
+        return c.json({
+          success: false,
+          error: `API request failed: ${response.status} ${response.statusText}`,
+          url: baseScanUrl
+        });
+      }
+      
+      const data = await response.json();
+      
+      console.log(`📊 Page ${page} - API Response Status:`, response.status);
+      console.log(`📊 Page ${page} - Transactions found:`, data.result ? data.result.length : 0);
+      
+      if (data.status === '1' && data.result && data.result.length > 0) {
+        allTransactions = allTransactions.concat(data.result);
+        console.log(`✅ Page ${page} added. Total transactions so far: ${allTransactions.length}`);
+        page++;
+        
+        // If we got less than pageSize, we've reached the end
+        if (data.result.length < pageSize) {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
+      
+      // Add small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
     
-    const data = await response.json();
+    console.log('🎉 Pagination complete! Total transactions fetched:', allTransactions.length);
     
-    console.log('📊 API Response Status:', response.status);
-    console.log('📊 API Response Headers:', response.headers);
-    console.log('📊 API Response Data:', JSON.stringify(data, null, 2));
-    console.log('📊 API URL:', baseScanUrl);
-    
-    if (data.status === '1' && data.result) {
+    if (allTransactions.length > 0) {
       // Filter for USDC transactions TO our wallet (incoming payments only)
-      const usdcTransactions = data.result.filter(tx => {
+      const usdcTransactions = allTransactions.filter(tx => {
         const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
