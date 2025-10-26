@@ -391,8 +391,8 @@ app.get("/blockchain-transactions", async (c) => {
     
     // BaseScan API endpoint for token transactions with API key
     // Using Etherscan API with Base chain ID (8453)
-    // Get last 7 days of transactions
-    const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+    // Get last 30 days of transactions (more comprehensive)
+    const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     console.log('📡 BaseScan URL:', baseScanUrl);
@@ -464,8 +464,8 @@ app.post("/sync-blockchain", async (c) => {
     
     // Get transactions from BaseScan with API key
     // Using Etherscan API with Base chain ID (8453)
-    // Get last 7 days of transactions
-    const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+    // Get last 30 days of transactions (more comprehensive)
+    const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     const response = await fetch(baseScanUrl);
@@ -506,6 +506,9 @@ app.post("/sync-blockchain", async (c) => {
       });
       
       console.log('✅ Found incoming USDC transactions (>=0.01 USDC):', usdcTransactions.length);
+      console.log('📊 Total transactions from API:', data.result.length);
+      console.log('📊 USDC Contract Address:', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
+      console.log('📊 Our Wallet Address:', walletAddress);
       
       // Send to Supabase
       const supabaseUrl = process.env.SUPABASE_URL;
@@ -698,6 +701,9 @@ app.post("/sync-all-historical", async (c) => {
       });
       
       console.log('✅ Found incoming USDC transactions (>=0.01 USDC):', usdcTransactions.length);
+      console.log('📊 Total transactions from API:', data.result.length);
+      console.log('📊 USDC Contract Address:', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
+      console.log('📊 Our Wallet Address:', walletAddress);
       
       // Send to Supabase
       const supabaseUrl = process.env.SUPABASE_URL;
