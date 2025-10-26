@@ -10,7 +10,7 @@ CREATE TABLE payments (
   wallet_address TEXT NOT NULL,
   amount_usdc DECIMAL(18,6) NOT NULL,
   amount_payx BIGINT NOT NULL,
-  transaction_hash TEXT UNIQUE NOT NULL, -- Unique constraint to prevent duplicates
+  transaction_hash TEXT UNIQUE, -- Optional for manual entries
   block_number TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

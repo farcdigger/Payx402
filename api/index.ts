@@ -239,6 +239,65 @@ app.post("/track-wallet", async (c) => {
   }
 });
 
+// Manual payment addition endpoint
+app.post("/add-manual-payment", async (c) => {
+  try {
+    const { wallet_address, amount_usdc, amount_payx, transaction_hash, block_number } = await c.req.json();
+    
+    if (!wallet_address || !amount_usdc || !amount_payx) {
+      return c.json({ 
+        success: false, 
+        error: 'Missing required fields: wallet_address, amount_usdc, amount_payx' 
+      });
+    }
+
+    if (!process.env.SUPABASE_URL) {
+      return c.json({ success: false, error: 'Supabase not configured' });
+    }
+
+    const paymentData = {
+      wallet_address,
+      amount_usdc: parseFloat(amount_usdc),
+      amount_payx: parseInt(amount_payx),
+      transaction_hash: transaction_hash || null, // Optional
+      block_number: block_number || null, // Optional
+      created_at: new Date().toISOString()
+    };
+
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'apikey': process.env.SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify(paymentData)
+    });
+
+    if (response.ok) {
+      console.log('✅ Manual payment added:', paymentData);
+      return c.json({ 
+        success: true, 
+        message: 'Payment added successfully',
+        payment: paymentData
+      });
+    } else {
+      const error = await response.text();
+      console.error('❌ Manual payment failed:', error);
+      return c.json({ 
+        success: false, 
+        error: `Failed to add payment: ${error}` 
+      });
+    }
+  } catch (error) {
+    console.error('❌ Manual payment error:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Internal server error' 
+    });
+  }
+});
+
 // Payment confirmation from x402
 app.post("/payment-confirmation", async (c) => {
   try {
@@ -391,8 +450,7 @@ app.get("/blockchain-transactions", async (c) => {
     
     // BaseScan API endpoint for token transactions with API key
     // Using Etherscan API with Base chain ID (8453)
-    // Get last 30 days of transactions (more comprehensive)
-    const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+    // Get ALL transactions (comprehensive sync)
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     console.log('📡 BaseScan URL:', baseScanUrl);
@@ -464,8 +522,7 @@ app.post("/sync-blockchain", async (c) => {
     
     // Get transactions from BaseScan with API key
     // Using Etherscan API with Base chain ID (8453)
-    // Get last 30 days of transactions (more comprehensive)
-    const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+    // Get ALL transactions (comprehensive sync)
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     const response = await fetch(baseScanUrl);
