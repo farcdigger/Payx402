@@ -466,6 +466,14 @@ app.get("/blockchain-transactions", async (c) => {
       
       if (!response.ok) {
         console.log('❌ API Request failed:', response.status, response.statusText);
+        
+        // Handle rate limiting specifically
+        if (response.status === 429) {
+          console.log('⏳ Rate limited, waiting 5 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          continue; // Retry this page
+        }
+        
         return c.json({
           success: false,
           error: `API request failed: ${response.status} ${response.statusText}`,
@@ -476,7 +484,23 @@ app.get("/blockchain-transactions", async (c) => {
       const data = await response.json();
       
       console.log(`📊 Page ${page} - API Response Status:`, response.status);
+      console.log(`📊 Page ${page} - API Status:`, data.status);
       console.log(`📊 Page ${page} - Transactions found:`, data.result ? data.result.length : 0);
+      
+      // Check for API errors
+      if (data.status === '0' && data.message) {
+        console.log('❌ API Error:', data.message);
+        if (data.message.includes('rate limit')) {
+          console.log('⏳ Rate limited by API, waiting 10 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          continue; // Retry this page
+        }
+        return c.json({
+          success: false,
+          error: `API Error: ${data.message}`,
+          url: baseScanUrl
+        });
+      }
       
       if (data.status === '1' && data.result && data.result.length > 0) {
         allTransactions = allTransactions.concat(data.result);
@@ -491,8 +515,8 @@ app.get("/blockchain-transactions", async (c) => {
         hasMore = false;
       }
       
-      // Add small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Add delay to avoid rate limiting (Etherscan recommends 200ms between requests)
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
     
     console.log('🎉 Pagination complete! Total transactions fetched:', allTransactions.length);
@@ -500,7 +524,8 @@ app.get("/blockchain-transactions", async (c) => {
     if (allTransactions.length > 0) {
       // Filter for USDC transactions (incoming only, excluding 0.01 USDC test payments)
       const usdcTransactions = allTransactions.filter(tx => {
-        const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        // USDC on Base: 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
+        const isUsdc = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
@@ -562,6 +587,14 @@ app.post("/sync-blockchain", async (c) => {
     
       if (!response.ok) {
         console.log('❌ API Request failed:', response.status, response.statusText);
+        
+        // Handle rate limiting specifically
+        if (response.status === 429) {
+          console.log('⏳ Rate limited, waiting 5 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          continue; // Retry this page
+        }
+        
         return c.json({
           success: false,
           error: `API request failed: ${response.status} ${response.statusText}`,
@@ -572,7 +605,23 @@ app.post("/sync-blockchain", async (c) => {
       const data = await response.json();
       
       console.log(`📊 Page ${page} - API Response Status:`, response.status);
+      console.log(`📊 Page ${page} - API Status:`, data.status);
       console.log(`📊 Page ${page} - Transactions found:`, data.result ? data.result.length : 0);
+      
+      // Check for API errors
+      if (data.status === '0' && data.message) {
+        console.log('❌ API Error:', data.message);
+        if (data.message.includes('rate limit')) {
+          console.log('⏳ Rate limited by API, waiting 10 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          continue; // Retry this page
+        }
+        return c.json({
+          success: false,
+          error: `API Error: ${data.message}`,
+          url: baseScanUrl
+        });
+      }
       
       if (data.status === '1' && data.result && data.result.length > 0) {
         allTransactions = allTransactions.concat(data.result);
@@ -587,8 +636,8 @@ app.post("/sync-blockchain", async (c) => {
         hasMore = false;
       }
       
-      // Add small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Add delay to avoid rate limiting (Etherscan recommends 200ms between requests)
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
     
     console.log('🎉 Pagination complete! Total transactions fetched:', allTransactions.length);
@@ -596,7 +645,8 @@ app.post("/sync-blockchain", async (c) => {
     if (allTransactions.length > 0) {
       // Filter for USDC transactions TO our wallet (incoming payments only)
       const usdcTransactions = allTransactions.filter(tx => {
-        const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        // USDC on Base: 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
+        const isUsdc = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
@@ -800,7 +850,8 @@ app.post("/sync-all-historical", async (c) => {
     if (data.status === '1' && data.result) {
       // Filter for USDC transactions TO our wallet (incoming payments only)
       const usdcTransactions = data.result.filter(tx => {
-        const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        // USDC on Base: 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
+        const isUsdc = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
@@ -1024,7 +1075,8 @@ app.get("/test-blockchain", async (c) => {
     
     if (data.status === '1' && data.result) {
       const usdcTransactions = data.result.filter(tx => {
-        const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        // USDC on Base: 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
+        const isUsdc = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
