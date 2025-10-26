@@ -450,82 +450,32 @@ app.get("/blockchain-transactions", async (c) => {
     
     // BaseScan API endpoint for token transactions with API key
     // Using Etherscan API with Base chain ID (8453)
-    // Get ALL transactions with pagination (comprehensive sync)
-    let allTransactions = [];
-    let page = 1;
-    const pageSize = 10000; // Max per page (Etherscan limit)
-    let hasMore = true;
+    // Get ALL transactions (single API call - like the working version)
+    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
-    console.log('🔄 Starting comprehensive blockchain fetch with pagination...');
+    console.log('📡 BaseScan URL:', baseScanUrl);
     
-    while (hasMore && page <= 20) { // Limit to 20 pages max (200k transactions)
-      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=10000&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
-      
-      console.log(`📄 Fetching page ${page}/20...`);
-      console.log(`🔗 URL: ${baseScanUrl}`);
-      console.log(`📊 Expected: 10,000 transactions per page`);
-      const response = await fetch(baseScanUrl);
-      
-      if (!response.ok) {
-        console.log('❌ API Request failed:', response.status, response.statusText);
-        
-        // Handle rate limiting specifically
-        if (response.status === 429) {
-          console.log('⏳ Rate limited, waiting 5 seconds...');
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          continue; // Retry this page
-        }
-        
-        return c.json({
-          success: false,
-          error: `API request failed: ${response.status} ${response.statusText}`,
-          url: baseScanUrl
-        });
-      }
-      
-      const data = await response.json();
-      
-      console.log(`📊 Page ${page} - API Response Status:`, response.status);
-      console.log(`📊 Page ${page} - API Status:`, data.status);
-      console.log(`📊 Page ${page} - Transactions found:`, data.result ? data.result.length : 0);
-      
-      // Check for API errors
-      if (data.status === '0' && data.message) {
-        console.log('❌ API Error:', data.message);
-        if (data.message.includes('rate limit')) {
-          console.log('⏳ Rate limited by API, waiting 10 seconds...');
-          await new Promise(resolve => setTimeout(resolve, 10000));
-          continue; // Retry this page
-        }
-        return c.json({
-          success: false,
-          error: `API Error: ${data.message}`,
-          url: baseScanUrl
-        });
-      }
-      
-      if (data.status === '1' && data.result && data.result.length > 0) {
-        allTransactions = allTransactions.concat(data.result);
-        console.log(`✅ Page ${page} added. Total transactions so far: ${allTransactions.length}`);
-        page++;
-        
-        // If we got less than pageSize, we've reached the end
-        if (data.result.length < pageSize) {
-          hasMore = false;
-        }
-      } else {
-        hasMore = false;
-      }
-      
-      // Add delay to avoid rate limiting (Etherscan recommends 200ms between requests)
-      await new Promise(resolve => setTimeout(resolve, 300));
+    const response = await fetch(baseScanUrl);
+    
+    if (!response.ok) {
+      console.log('❌ API Request failed:', response.status, response.statusText);
+      return c.json({
+        success: false,
+        error: `API request failed: ${response.status} ${response.statusText}`,
+        url: baseScanUrl
+      });
     }
     
-    console.log('🎉 Pagination complete! Total transactions fetched:', allTransactions.length);
+    const data = await response.json();
     
-    if (allTransactions.length > 0) {
+    console.log('📊 API Response Status:', response.status);
+    console.log('📊 API Response Headers:', response.headers);
+    console.log('📊 BaseScan response:', JSON.stringify(data, null, 2));
+    console.log('📊 API URL:', baseScanUrl);
+    
+    if (data.status === '1' && data.result) {
       // Filter for USDC transactions (incoming only, excluding 0.01 USDC test payments)
-      const usdcTransactions = allTransactions.filter(tx => {
+      const usdcTransactions = data.result.filter(tx => {
         // USDC on Base: 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
         const isUsdc = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
@@ -573,82 +523,32 @@ app.post("/sync-blockchain", async (c) => {
     
     // Get transactions from BaseScan with API key
     // Using Etherscan API with Base chain ID (8453)
-    // Get ALL transactions with pagination (comprehensive sync)
-    let allTransactions = [];
-    let page = 1;
-    const pageSize = 10000; // Max per page (Etherscan limit)
-    let hasMore = true;
+    // Get ALL transactions (single API call - like the working version)
+    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
-    console.log('🔄 Starting comprehensive blockchain sync with pagination...');
+    console.log('📡 BaseScan URL:', baseScanUrl);
     
-    while (hasMore && page <= 20) { // Limit to 20 pages max (200k transactions)
-      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=10000&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
-      
-      console.log(`📄 Fetching page ${page}/20...`);
-      console.log(`🔗 URL: ${baseScanUrl}`);
-      console.log(`📊 Expected: 10,000 transactions per page`);
-      const response = await fetch(baseScanUrl);
+    const response = await fetch(baseScanUrl);
     
-      if (!response.ok) {
-        console.log('❌ API Request failed:', response.status, response.statusText);
-        
-        // Handle rate limiting specifically
-        if (response.status === 429) {
-          console.log('⏳ Rate limited, waiting 5 seconds...');
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          continue; // Retry this page
-        }
-        
-        return c.json({
-          success: false,
-          error: `API request failed: ${response.status} ${response.statusText}`,
-          url: baseScanUrl
-        });
-      }
-      
-      const data = await response.json();
-      
-      console.log(`📊 Page ${page} - API Response Status:`, response.status);
-      console.log(`📊 Page ${page} - API Status:`, data.status);
-      console.log(`📊 Page ${page} - Transactions found:`, data.result ? data.result.length : 0);
-      
-      // Check for API errors
-      if (data.status === '0' && data.message) {
-        console.log('❌ API Error:', data.message);
-        if (data.message.includes('rate limit')) {
-          console.log('⏳ Rate limited by API, waiting 10 seconds...');
-          await new Promise(resolve => setTimeout(resolve, 10000));
-          continue; // Retry this page
-        }
-        return c.json({
-          success: false,
-          error: `API Error: ${data.message}`,
-          url: baseScanUrl
-        });
-      }
-      
-      if (data.status === '1' && data.result && data.result.length > 0) {
-        allTransactions = allTransactions.concat(data.result);
-        console.log(`✅ Page ${page} added. Total transactions so far: ${allTransactions.length}`);
-        page++;
-        
-        // If we got less than pageSize, we've reached the end
-        if (data.result.length < pageSize) {
-          hasMore = false;
-        }
-      } else {
-        hasMore = false;
-      }
-      
-      // Add delay to avoid rate limiting (Etherscan recommends 200ms between requests)
-      await new Promise(resolve => setTimeout(resolve, 300));
+    if (!response.ok) {
+      console.log('❌ API Request failed:', response.status, response.statusText);
+      return c.json({
+        success: false,
+        error: `API request failed: ${response.status} ${response.statusText}`,
+        url: baseScanUrl
+      });
     }
     
-    console.log('🎉 Pagination complete! Total transactions fetched:', allTransactions.length);
+    const data = await response.json();
     
-    if (allTransactions.length > 0) {
+    console.log('📊 API Response Status:', response.status);
+    console.log('📊 API Response Headers:', response.headers);
+    console.log('📊 BaseScan response:', JSON.stringify(data, null, 2));
+    console.log('📊 API URL:', baseScanUrl);
+    
+    if (data.status === '1' && data.result) {
       // Filter for USDC transactions TO our wallet (incoming payments only)
-      const usdcTransactions = allTransactions.filter(tx => {
+      const usdcTransactions = data.result.filter(tx => {
         // USDC on Base: 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
         const isUsdc = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
