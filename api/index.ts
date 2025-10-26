@@ -93,7 +93,7 @@ app.get("/payment/5usdc", async (c) => {
           'apikey': process.env.SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
-          wallet_address: walletAddress,
+          wallet_address: walletAddress.toLowerCase(),
           amount_usdc: 5,
           amount_payx: 100000,
           created_at: new Date().toISOString()
@@ -128,7 +128,7 @@ app.get("/payment/10usdc", async (c) => {
           'apikey': process.env.SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
-          wallet_address: walletAddress,
+          wallet_address: walletAddress.toLowerCase(),
           amount_usdc: 10,
           amount_payx: 200000,
           created_at: new Date().toISOString()
@@ -162,7 +162,7 @@ app.get("/payment/100usdc", async (c) => {
           'apikey': process.env.SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
-          wallet_address: walletAddress,
+          wallet_address: walletAddress.toLowerCase(),
           amount_usdc: 100,
           amount_payx: 2000000,
           created_at: new Date().toISOString()
@@ -186,7 +186,7 @@ app.get("/payment/100usdc", async (c) => {
 
 // Balance endpoint - simple fetch to Supabase
 app.get("/balance/:walletAddress", async (c) => {
-  const walletAddress = c.req.param('walletAddress');
+  const walletAddress = c.req.param('walletAddress').toLowerCase(); // Convert to lowercase for case-insensitive search
   
   if (!process.env.SUPABASE_URL) {
     return c.json({ success: false, error: 'Supabase not configured' });
@@ -256,7 +256,7 @@ app.post("/add-manual-payment", async (c) => {
     }
 
     const paymentData = {
-      wallet_address,
+      wallet_address: wallet_address.toLowerCase(), // Convert to lowercase for consistency
       amount_usdc: parseFloat(amount_usdc),
       amount_payx: parseInt(amount_payx),
       transaction_hash: transaction_hash || null, // Optional
@@ -337,7 +337,7 @@ app.post("/payment-confirmation", async (c) => {
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
-          wallet_address: wallet,
+          wallet_address: wallet.toLowerCase(),
           amount_usdc: amountUsdc,
           amount_payx: amountPayx
         })
@@ -420,7 +420,7 @@ app.post("/test-payment", async (c) => {
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
-          wallet_address: wallet,
+          wallet_address: wallet.toLowerCase(),
           amount_usdc: amount || 5,
           amount_payx: (amount || 5) * 20000
         })
@@ -623,7 +623,7 @@ app.post("/sync-blockchain", async (c) => {
                 'Prefer': 'return=minimal'
               },
               body: JSON.stringify({
-                wallet_address: tx.from, // Who sent the payment
+                wallet_address: tx.from.toLowerCase(), // Who sent the payment (convert to lowercase)
                 amount_usdc: amountUsdc,
                 amount_payx: amountPayx,
                 transaction_hash: tx.hash,
@@ -693,7 +693,7 @@ app.get("/dashboard", async (c) => {
         const wallet = payment.wallet_address;
         if (!walletStats[wallet]) {
           walletStats[wallet] = {
-            wallet_address: wallet,
+            wallet_address: wallet.toLowerCase(),
             total_usdc: 0,
             total_payx: 0,
             payment_count: 0,
@@ -825,7 +825,7 @@ app.post("/sync-all-historical", async (c) => {
                 'Prefer': 'return=minimal'
               },
               body: JSON.stringify({
-                wallet_address: tx.from, // Who sent the payment
+                wallet_address: tx.from.toLowerCase(), // Who sent the payment (convert to lowercase)
                 amount_usdc: amountUsdc,
                 amount_payx: amountPayx,
                 transaction_hash: tx.hash,
@@ -1778,7 +1778,7 @@ app.get("/", (c) => {
           const balanceAmount = document.getElementById('balanceAmount');
           const balanceDetails = document.getElementById('balanceDetails');
           
-          const walletAddress = walletInput.value.trim();
+          const walletAddress = walletInput.value.trim().toLowerCase(); // Convert to lowercase for case-insensitive search
           
           if (!walletAddress) {
             alert('Please enter a wallet address');
@@ -1945,7 +1945,7 @@ app.get("/", (c) => {
           const balanceAmount = document.getElementById('balanceAmount');
           const balanceDetails = document.getElementById('balanceDetails');
           
-          const walletAddress = walletInput.value.trim();
+          const walletAddress = walletInput.value.trim().toLowerCase(); // Convert to lowercase for case-insensitive search
           
           if (!walletAddress) {
             alert('Please enter a wallet address');
