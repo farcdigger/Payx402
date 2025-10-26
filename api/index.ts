@@ -453,15 +453,16 @@ app.get("/blockchain-transactions", async (c) => {
     // Get ALL transactions with pagination (comprehensive sync)
     let allTransactions = [];
     let page = 1;
-    const pageSize = 10000; // Max per page
+    const pageSize = 10000; // Max per page (Etherscan limit)
     let hasMore = true;
     
     console.log('🔄 Starting comprehensive blockchain fetch with pagination...');
     
-    while (hasMore) {
+    while (hasMore && page <= 10) { // Limit to 10 pages max (100k transactions)
       const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
       
-      console.log(`📄 Fetching page ${page}...`);
+      console.log(`📄 Fetching page ${page}/10...`);
+      console.log(`🔗 URL: ${baseScanUrl}`);
       const response = await fetch(baseScanUrl);
       
       if (!response.ok) {
@@ -574,15 +575,16 @@ app.post("/sync-blockchain", async (c) => {
     // Get ALL transactions with pagination (comprehensive sync)
     let allTransactions = [];
     let page = 1;
-    const pageSize = 10000; // Max per page
+    const pageSize = 10000; // Max per page (Etherscan limit)
     let hasMore = true;
     
     console.log('🔄 Starting comprehensive blockchain sync with pagination...');
     
-    while (hasMore) {
+    while (hasMore && page <= 10) { // Limit to 10 pages max (100k transactions)
       const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
       
-      console.log(`📄 Fetching page ${page}...`);
+      console.log(`📄 Fetching page ${page}/10...`);
+      console.log(`🔗 URL: ${baseScanUrl}`);
       const response = await fetch(baseScanUrl);
     
       if (!response.ok) {
@@ -967,6 +969,65 @@ app.post("/sync-all-historical", async (c) => {
   }
 });
 
+// Test pagination endpoint
+app.get("/test-pagination", async (c) => {
+  try {
+    const walletAddress = "0xda8d766bc482a7953b72283f56c12ce00da6a86a";
+    
+    console.log('🧪 Testing pagination...');
+    
+    // Test first page only
+    const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=1&offset=10000&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    
+    console.log('🔗 Testing URL:', baseScanUrl);
+    const response = await fetch(baseScanUrl);
+    
+    if (!response.ok) {
+      return c.json({
+        success: false,
+        error: `API request failed: ${response.status} ${response.statusText}`
+      });
+    }
+    
+    const data = await response.json();
+    
+    console.log('📊 API Response Status:', response.status);
+    console.log('📊 API Status:', data.status);
+    console.log('📊 Total transactions:', data.result ? data.result.length : 0);
+    
+    if (data.status === '1' && data.result) {
+      const usdcTransactions = data.result.filter(tx => {
+        const isUsdc = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+        const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
+        const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase();
+        return isUsdc && isIncoming && isNotOutgoing;
+      });
+      
+      return c.json({
+        success: true,
+        message: 'Pagination test completed',
+        total_transactions: data.result.length,
+        usdc_transactions: usdcTransactions.length,
+        sample_transactions: usdcTransactions.slice(0, 5).map(tx => ({
+          from: tx.from,
+          amount: parseFloat(tx.value) / Math.pow(10, 6),
+          hash: tx.hash
+        }))
+      });
+    }
+    
+    return c.json({
+      success: false,
+      error: 'No data received',
+      api_response: data
+    });
+    
+  } catch (error) {
+    console.error('❌ Pagination test error:', error);
+    return c.json({ success: false, error: error.message });
+  }
+});
+
 // Force full sync endpoint for testing
 app.post("/force-sync", async (c) => {
   try {
@@ -980,7 +1041,7 @@ app.post("/force-sync", async (c) => {
     const pageSize = 10000;
     let hasMore = true;
     
-    while (hasMore) {
+    while (hasMore && page <= 10) { // Limit to 10 pages max (100k transactions)
       const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
       
       console.log(`📄 Force sync - Fetching page ${page}...`);
