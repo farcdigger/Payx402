@@ -1483,7 +1483,7 @@ app.get("/", (c) => {
         <a href="#" onclick="openPaymentModal('/payment/10usdc', '🚀 10 USDC Payment'); return false;">10 USDC → 200,000 PAYX</a>
         <a href="#" onclick="openPaymentModal('/payment/100usdc', '🌟 100 USDC Payment', 'premium'); return false;">100 USDC → 2,000,000 PAYX</a>
         
-        <!-- Test button removed - was causing Turkish text in debug modal -->
+        <a href="#" onclick="openPaymentModal('/payment/test', '🧪 Test Payment', 'test'); return false;" class="test-button">0.01 USDC → 50 PAYX</a>
         
         <div class="info">
           <p><strong>Token Information:</strong></p>
