@@ -600,7 +600,6 @@ app.post("/sync-blockchain", async (c) => {
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
-        const isNotTest = amountUsdc >= 0.01; // Allow 0.01 USDC test payments and above
         
         console.log(`🔍 Transaction: ${tx.hash}`);
         console.log(`   From: ${tx.from}`);
@@ -609,13 +608,23 @@ app.post("/sync-blockchain", async (c) => {
         console.log(`   Is Incoming: ${isIncoming}`);
         console.log(`   Is Not Outgoing: ${isNotOutgoing}`);
         
-        return isUsdc && isIncoming && isNotOutgoing && isNotTest;
+        // NO FILTERING - Get ALL USDC incoming transactions regardless of amount
+        return isUsdc && isIncoming && isNotOutgoing;
       });
       
-      console.log('✅ Found incoming USDC transactions (>=0.01 USDC):', usdcTransactions.length);
-      console.log('📊 Total transactions from API:', data.result.length);
+      console.log('✅ Found ALL incoming USDC transactions (no filtering):', usdcTransactions.length);
+      console.log('📊 Total transactions from API:', allTransactions.length);
       console.log('📊 USDC Contract Address:', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
       console.log('📊 Our Wallet Address:', walletAddress);
+      
+      // Log first few transactions for debugging
+      if (usdcTransactions.length > 0) {
+        console.log('🔍 Sample USDC transactions:');
+        usdcTransactions.slice(0, 5).forEach((tx, index) => {
+          const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+          console.log(`   ${index + 1}. ${tx.from} → ${amountUsdc} USDC (${tx.hash})`);
+        });
+      }
       
       // Send to Supabase
       const supabaseUrl = process.env.SUPABASE_URL;
@@ -795,7 +804,6 @@ app.post("/sync-all-historical", async (c) => {
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
-        const isNotTest = amountUsdc >= 0.01; // Allow 0.01 USDC test payments and above
         
         console.log(`🔍 Transaction: ${tx.hash}`);
         console.log(`   From: ${tx.from}`);
@@ -804,13 +812,23 @@ app.post("/sync-all-historical", async (c) => {
         console.log(`   Is Incoming: ${isIncoming}`);
         console.log(`   Is Not Outgoing: ${isNotOutgoing}`);
         
-        return isUsdc && isIncoming && isNotOutgoing && isNotTest;
+        // NO FILTERING - Get ALL USDC incoming transactions regardless of amount
+        return isUsdc && isIncoming && isNotOutgoing;
       });
       
-      console.log('✅ Found incoming USDC transactions (>=0.01 USDC):', usdcTransactions.length);
-      console.log('📊 Total transactions from API:', data.result.length);
+      console.log('✅ Found ALL incoming USDC transactions (no filtering):', usdcTransactions.length);
+      console.log('📊 Total transactions from API:', allTransactions.length);
       console.log('📊 USDC Contract Address:', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
       console.log('📊 Our Wallet Address:', walletAddress);
+      
+      // Log first few transactions for debugging
+      if (usdcTransactions.length > 0) {
+        console.log('🔍 Sample USDC transactions:');
+        usdcTransactions.slice(0, 5).forEach((tx, index) => {
+          const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+          console.log(`   ${index + 1}. ${tx.from} → ${amountUsdc} USDC (${tx.hash})`);
+        });
+      }
       
       // Send to Supabase
       const supabaseUrl = process.env.SUPABASE_URL;
@@ -895,6 +913,79 @@ app.post("/sync-all-historical", async (c) => {
       success: false,
       error: `Sync error: ${error.message}`
     });
+  }
+});
+
+// Force full sync endpoint for testing
+app.post("/force-sync", async (c) => {
+  try {
+    console.log('🔄 FORCE SYNC: Starting comprehensive blockchain sync...');
+    
+    const walletAddress = "0xda8d766bc482a7953b72283f56c12ce00da6a86a";
+    
+    // Get ALL transactions with pagination
+    let allTransactions = [];
+    let page = 1;
+    const pageSize = 10000;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+      
+      console.log(`📄 Force sync - Fetching page ${page}...`);
+      const response = await fetch(baseScanUrl);
+      
+      if (!response.ok) {
+        return c.json({
+          success: false,
+          error: `API request failed: ${response.status} ${response.statusText}`
+        });
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === '1' && data.result && data.result.length > 0) {
+        allTransactions = allTransactions.concat(data.result);
+        console.log(`✅ Force sync - Page ${page} added. Total: ${allTransactions.length}`);
+        page++;
+        
+        if (data.result.length < pageSize) {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    // Filter for USDC transactions
+    const usdcTransactions = allTransactions.filter(tx => {
+      const isUsdc = tx.contractAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+      const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
+      const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase();
+      return isUsdc && isIncoming && isNotOutgoing;
+    });
+    
+    console.log('🎉 FORCE SYNC COMPLETE!');
+    console.log(`📊 Total transactions: ${allTransactions.length}`);
+    console.log(`📊 USDC transactions: ${usdcTransactions.length}`);
+    
+    return c.json({
+      success: true,
+      message: 'Force sync completed',
+      total_transactions: allTransactions.length,
+      usdc_transactions: usdcTransactions.length,
+      sample_transactions: usdcTransactions.slice(0, 10).map(tx => ({
+        from: tx.from,
+        amount: parseFloat(tx.value) / Math.pow(10, 6),
+        hash: tx.hash
+      }))
+    });
+    
+  } catch (error) {
+    console.error('❌ Force sync error:', error);
+    return c.json({ success: false, error: error.message });
   }
 });
 
