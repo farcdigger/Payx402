@@ -567,7 +567,7 @@ app.post("/sync-blockchain", async (c) => {
       });
       
       console.log('✅ Found ALL incoming USDC transactions (no filtering):', usdcTransactions.length);
-      console.log('📊 Total transactions from API:', allTransactions.length);
+      console.log('📊 Total transactions from API:', data.result.length);
       console.log('📊 USDC Contract Address:', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
       console.log('📊 Our Wallet Address:', walletAddress);
       
@@ -772,7 +772,7 @@ app.post("/sync-all-historical", async (c) => {
       });
       
       console.log('✅ Found ALL incoming USDC transactions (no filtering):', usdcTransactions.length);
-      console.log('📊 Total transactions from API:', allTransactions.length);
+      console.log('📊 Total transactions from API:', data.result.length);
       console.log('📊 USDC Contract Address:', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
       console.log('📊 Our Wallet Address:', walletAddress);
       
