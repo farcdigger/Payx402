@@ -37,6 +37,14 @@ app.use(
           description: "🧪 TEST: Pay 0.01 USDC → Get 50 PAYX tokens. Tokens will be sent to your wallet later.",
         }
       },
+      "GET /payment/1usdc": {
+        price: "$1",
+        network: network,
+        rpcUrl: rpcUrl,
+        config: {
+          description: "💰 Pay 1 USDC → Get 20,000 PAYX tokens. Tokens will be sent to your wallet later.",
+        }
+      },
       "GET /payment/5usdc": {
         price: "$5",
         network: network,
@@ -79,6 +87,38 @@ app.get("/payment/test", (c) => {
   });
 });
 
+
+app.get("/payment/1usdc", async (c) => {
+  // Simple payment tracking without Supabase dependency
+  const walletAddress = c.req.query('wallet');
+  if (walletAddress && process.env.SUPABASE_URL) {
+    try {
+      const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'apikey': process.env.SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          wallet_address: walletAddress,
+          amount_usdc: 1,
+          amount_payx: 20000
+        })
+      });
+    } catch (error) {
+      console.error('Supabase error:', error);
+    }
+  }
+  
+  const payment = new Payment({
+    amount: { currency: "USDC", value: "1" },
+    destination: "0xda8d766bc482a7953b72283f56c12ce00da6a86a",
+    rpcUrl: "https://api.developer.coinbase.com/rpc/v1/base/INI3BbjORF6Dibor4YYY21mATAn7BIAo"
+  });
+  
+  return c.html(payment.html());
+});
 
 app.get("/payment/5usdc", async (c) => {
   // Simple payment tracking without Supabase dependency
@@ -250,7 +290,10 @@ app.post("/payment-confirmation", async (c) => {
     let amountUsdc = 0;
     let amountPayx = 0;
     
-    if (paymentUrl.includes('/payment/5usdc')) {
+    if (paymentUrl.includes('/payment/1usdc')) {
+      amountUsdc = 1;
+      amountPayx = 20000;
+    } else if (paymentUrl.includes('/payment/5usdc')) {
       amountUsdc = 5;
       amountPayx = 100000;
     } else if (paymentUrl.includes('/payment/10usdc')) {
@@ -422,12 +465,12 @@ app.get("/blockchain-transactions", async (c) => {
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
-        const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
+        const isNotTest = amountUsdc >= 0.01; // Allow 0.01 USDC test payments and above
         
         return isUsdc && isIncoming && isNotOutgoing && isNotTest;
       });
       
-      console.log('✅ Found USDC transactions (>=0.1 USDC):', usdcTransactions.length);
+      console.log('✅ Found USDC transactions (>=0.01 USDC):', usdcTransactions.length);
       
       return c.json({
         success: true,
@@ -493,7 +536,7 @@ app.post("/sync-blockchain", async (c) => {
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
-        const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
+        const isNotTest = amountUsdc >= 0.01; // Allow 0.01 USDC test payments and above
         
         console.log(`🔍 Transaction: ${tx.hash}`);
         console.log(`   From: ${tx.from}`);
@@ -505,7 +548,7 @@ app.post("/sync-blockchain", async (c) => {
         return isUsdc && isIncoming && isNotOutgoing && isNotTest;
       });
       
-      console.log('✅ Found incoming USDC transactions (>=0.1 USDC):', usdcTransactions.length);
+      console.log('✅ Found incoming USDC transactions (>=0.01 USDC):', usdcTransactions.length);
       
       // Send to Supabase
       const supabaseUrl = process.env.SUPABASE_URL;
@@ -685,7 +728,7 @@ app.post("/sync-all-historical", async (c) => {
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
-        const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
+        const isNotTest = amountUsdc >= 0.01; // Allow 0.01 USDC test payments and above
         
         console.log(`🔍 Transaction: ${tx.hash}`);
         console.log(`   From: ${tx.from}`);
@@ -697,7 +740,7 @@ app.post("/sync-all-historical", async (c) => {
         return isUsdc && isIncoming && isNotOutgoing && isNotTest;
       });
       
-      console.log('✅ Found incoming USDC transactions (>=0.1 USDC):', usdcTransactions.length);
+      console.log('✅ Found incoming USDC transactions (>=0.01 USDC):', usdcTransactions.length);
       
       // Send to Supabase
       const supabaseUrl = process.env.SUPABASE_URL;
@@ -824,7 +867,7 @@ app.get("/test-blockchain", async (c) => {
         const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase(); // Sadece GELEN transfer'lar
         const isNotOutgoing = tx.from.toLowerCase() !== walletAddress.toLowerCase(); // ÇIKAN transfer'lar değil
         const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
-        const isNotTest = amountUsdc >= 0.1; // Filter out 0.01 USDC test payments
+        const isNotTest = amountUsdc >= 0.01; // Allow 0.01 USDC test payments and above
         
         return isUsdc && isIncoming && isNotOutgoing && isNotTest;
       });
@@ -1202,6 +1245,7 @@ app.get("/", (c) => {
           </div>
         </div>
         
+        <a href="#" onclick="openPaymentModal('/payment/1usdc', '💰 1 USDC Payment'); return false;">1 USDC → 20,000 PAYX</a>
         <a href="#" onclick="openPaymentModal('/payment/5usdc', '💎 5 USDC Payment'); return false;">5 USDC → 100,000 PAYX</a>
         <a href="#" onclick="openPaymentModal('/payment/10usdc', '🚀 10 USDC Payment'); return false;">10 USDC → 200,000 PAYX</a>
         <a href="#" onclick="openPaymentModal('/payment/100usdc', '🌟 100 USDC Payment', 'premium'); return false;">100 USDC → 2,000,000 PAYX</a>
@@ -1217,6 +1261,7 @@ app.get("/", (c) => {
           
           <p style="margin-top: 15px;"><strong>Payment Options:</strong></p>
           <p>• 0.01 USDC = 50 PAYX (Test)</p>
+          <p>• 1 USDC = 20,000 PAYX</p>
           <p>• 5 USDC = 100,000 PAYX</p>
           <p>• 10 USDC = 200,000 PAYX</p>
           <p>• 100 USDC = 2,000,000 PAYX</p>
