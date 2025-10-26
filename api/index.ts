@@ -857,6 +857,68 @@ app.get("/test-blockchain", async (c) => {
   }
 });
 
+// Manual Supabase entry for missing payment
+app.post("/add-manual-payment", async (c) => {
+  try {
+    const { wallet_address, amount_usdc, amount_payx, transaction_hash, block_number } = await c.req.json();
+    
+    if (!process.env.SUPABASE_URL) {
+      return c.json({ success: false, error: 'Supabase not configured' });
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    
+    console.log('📝 Adding manual payment to Supabase...');
+    console.log('Wallet:', wallet_address);
+    console.log('Amount USDC:', amount_usdc);
+    console.log('Amount PAYX:', amount_payx);
+    console.log('Transaction Hash:', transaction_hash);
+    
+    const response = await fetch(`${supabaseUrl}/rest/v1/payments`, {
+      method: 'POST',
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        wallet_address: wallet_address,
+        amount_usdc: amount_usdc,
+        amount_payx: amount_payx,
+        transaction_hash: transaction_hash || null,
+        block_number: block_number || null,
+        created_at: new Date().toISOString()
+      })
+    });
+    
+    if (response.ok) {
+      console.log('✅ Manual payment added successfully');
+      return c.json({
+        success: true,
+        message: 'Payment added successfully',
+        wallet_address,
+        amount_usdc,
+        amount_payx
+      });
+    } else {
+      const errorText = await response.text();
+      console.log('❌ Failed to add manual payment:', errorText);
+      return c.json({
+        success: false,
+        error: `Failed to add payment: ${errorText}`
+      });
+    }
+  } catch (error) {
+    console.log('❌ Manual payment error:', error);
+    return c.json({
+      success: false,
+      error: `Manual payment error: ${error.message}`
+    });
+  }
+});
+
 // Simple info page with links to protected endpoints
 app.get("/", (c) => {
   // Vercel optimization - faster response
