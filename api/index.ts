@@ -458,11 +458,12 @@ app.get("/blockchain-transactions", async (c) => {
     
     console.log('🔄 Starting comprehensive blockchain fetch with pagination...');
     
-    while (hasMore && page <= 10) { // Limit to 10 pages max (100k transactions)
-      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    while (hasMore && page <= 20) { // Limit to 20 pages max (200k transactions)
+      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=10000&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
       
-      console.log(`📄 Fetching page ${page}/10...`);
+      console.log(`📄 Fetching page ${page}/20...`);
       console.log(`🔗 URL: ${baseScanUrl}`);
+      console.log(`📊 Expected: 10,000 transactions per page`);
       const response = await fetch(baseScanUrl);
       
       if (!response.ok) {
@@ -580,11 +581,12 @@ app.post("/sync-blockchain", async (c) => {
     
     console.log('🔄 Starting comprehensive blockchain sync with pagination...');
     
-    while (hasMore && page <= 10) { // Limit to 10 pages max (100k transactions)
-      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    while (hasMore && page <= 20) { // Limit to 20 pages max (200k transactions)
+      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=10000&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
       
-      console.log(`📄 Fetching page ${page}/10...`);
+      console.log(`📄 Fetching page ${page}/20...`);
       console.log(`🔗 URL: ${baseScanUrl}`);
+      console.log(`📊 Expected: 10,000 transactions per page`);
       const response = await fetch(baseScanUrl);
     
       if (!response.ok) {
@@ -976,7 +978,7 @@ app.get("/test-pagination", async (c) => {
     
     console.log('🧪 Testing pagination...');
     
-    // Test first page only
+    // Test first page only with max offset
     const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=1&offset=10000&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
     
     console.log('🔗 Testing URL:', baseScanUrl);
@@ -1041,8 +1043,8 @@ app.post("/force-sync", async (c) => {
     const pageSize = 10000;
     let hasMore = true;
     
-    while (hasMore && page <= 10) { // Limit to 10 pages max (100k transactions)
-      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=${pageSize}&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
+    while (hasMore && page <= 20) { // Limit to 20 pages max (200k transactions)
+      const baseScanUrl = `https://api.etherscan.io/v2/api?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc&chainid=8453&page=${page}&offset=10000&apikey=SI8ECAC19FPN92K9MCNQENMGY6Z6MRM14Q`;
       
       console.log(`📄 Force sync - Fetching page ${page}...`);
       const response = await fetch(baseScanUrl);
