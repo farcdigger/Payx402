@@ -970,11 +970,77 @@ app.post("/force-sync", async (c) => {
       console.log(`📊 Total transactions: ${data.result.length}`);
       console.log(`📊 USDC transactions: ${usdcTransactions.length}`);
       
+      // Now sync to Supabase
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        return c.json({
+          success: false,
+          error: 'Supabase not configured',
+          total_transactions: data.result.length,
+          usdc_transactions: usdcTransactions.length
+        });
+      }
+      
+      let syncedCount = 0;
+      
+      for (const tx of usdcTransactions) {
+        try {
+          const amountUsdc = parseFloat(tx.value) / Math.pow(10, 6);
+          const amountPayx = Math.floor(amountUsdc * 20000); // 1 USDC = 20,000 PAYX
+          
+          // Check if transaction already exists
+          const checkResponse = await fetch(`${supabaseUrl}/rest/v1/payments?transaction_hash=eq.${tx.hash}&select=id`, {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`
+            }
+          });
+          
+          if (checkResponse.ok) {
+            const existingTransactions = await checkResponse.json();
+            if (existingTransactions.length > 0) {
+              console.log(`⏭️ Transaction already exists: ${tx.hash}`);
+              continue; // Skip this transaction
+            }
+          }
+          
+          const supabaseResponse = await fetch(`${supabaseUrl}/rest/v1/payments`, {
+            method: 'POST',
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              wallet_address: tx.from, // Who sent the payment
+              amount_usdc: amountUsdc,
+              amount_payx: amountPayx,
+              transaction_hash: tx.hash,
+              block_number: tx.blockNumber,
+              created_at: new Date(parseInt(tx.timeStamp) * 1000).toISOString()
+            })
+          });
+          
+          if (supabaseResponse.ok) {
+            syncedCount++;
+            console.log(`✅ Force sync - Synced transaction: ${tx.hash} from ${tx.from}`);
+          } else {
+            console.log(`❌ Force sync - Failed to sync transaction: ${tx.hash}`, await supabaseResponse.text());
+          }
+        } catch (error) {
+          console.log(`❌ Force sync - Failed to sync transaction: ${tx.hash}`, error);
+        }
+      }
+      
       return c.json({
         success: true,
-        message: 'Force sync completed',
+        message: `Force sync completed - Synced ${syncedCount} new transactions to Supabase`,
         total_transactions: data.result.length,
         usdc_transactions: usdcTransactions.length,
+        synced_to_supabase: syncedCount,
         sample_transactions: usdcTransactions.slice(0, 10).map(tx => ({
           from: tx.from,
           amount: parseFloat(tx.value) / Math.pow(10, 6),
