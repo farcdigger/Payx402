@@ -9,7 +9,7 @@ const network = 'base'; // Always use Base network
 const rpcUrl = process.env.BASE_RPC_URL || 'https://mainnet.base.org'; // Public Base RPC
 
 const app = new Hono();
-
+ 
 // Load x402 immediately - not lazy
 const { paymentMiddleware: x402Middleware, facilitator: cdpFacilitator } = await (async () => {
   const x402Hono = await import("x402-hono");
